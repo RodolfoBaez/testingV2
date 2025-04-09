@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Capacitance Plot{% endblock %}
+{% block content %}
+<h1>Capacitance Plot</h1>
+<input type="file" id="fileInput" accept=".csv">
+<button id="clearButton">Clear Data</button>
+<div id="plot"></div>
+<div id="table"></div>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+<script>
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            alert("No file selected. Exiting...");
+            return;
+        }
+
+        Papa.parse(file, {
+            header: false,
+            dynamicTyping: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                const data = results.data;
+                const capacitances = [];
+                const xValues = [];
+                let xLabel = '';
+                let xRange = null;
+
+                // Determine if the file contains Voltage (V) or Time (T)
+                if (data[0][2] && data[0][2].toString().startsWith('V')) {
+                    console.log("Detected Voltage (V) data.");
+                    xLabel = 'Voltage (V)';
+                    xRange = [-6, 6]; // Example range for voltage
+                    data.forEach(row => {
+                        if (row.length < 3) return;
+
+                        const capacitance = parseFloat(row[0].replace(/NCM\+/, ''));
+                        const voltage = parseFloat(row[2].replace(/V+|"/g, ''));
+
+                        if (isNaN(capacitance) || isNaN(voltage)) return;
+
+                        capacitances.push(capacitance);
+                        xValues.push(voltage);
+                    });
+                } else if (data[0][1] && data[0][1].toString().startsWith('T')) {
+                    console.log("Detected Time (T) data.");
+                    xLabel = 'Time (T)';
+                    data.forEach(row => {
+                        if (row.length < 2) return;
+
+                        const capacitance = parseFloat(row[0].replace(/NCM\+/, ''));
+                        const time = parseFloat(row[1].replace(/T/, '').replace(/E\+0/, '').replace(/"/g, '').trim());
+
+                        if (isNaN(capacitance) || isNaN(time)) return;
+
+                        capacitances.push(capacitance);
+                        xValues.push(time);
+                    });
+                } else {
+                    alert("Unknown data format. Exiting...");
+                    return;
+                }
+
+                // Plot the graph
+                const trace = {
+                    x: xValues,
+                    y: capacitances,
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    line: { shape: 'spline' }  // Use spline interpolation for smooth curve
+                };
+
+                const layout = {
+                    title: `Capacitance vs. ${xLabel}`,
+                    xaxis: { title: xLabel, range: xRange },
+                    yaxis: { title: 'Capacitance (C)' }
+                };
+
+                Plotly.newPlot('plot', [trace], layout);
+
+                // Create the table
+                let tableHtml = `<table border="1"><tr><th>${xLabel}</th><th>Capacitance (C)</th></tr>`;
+                for (let i = 0; i < capacitances.length; i++) {
+                    tableHtml += `<tr><td>${xValues[i]}</td><td>${capacitances[i]}</td></tr>`;
+                }
+                tableHtml += '</table>';
+                document.getElementById('table').innerHTML = tableHtml;
+            }
+        });
+    });
+
+    // Clear data button functionality
+    document.getElementById('clearButton').addEventListener('click', function() {
+        Plotly.purge('plot'); // Clear the graph
+        document.getElementById('table').innerHTML = ''; // Clear the table
+    });
+</script>
+{% endblock %}
