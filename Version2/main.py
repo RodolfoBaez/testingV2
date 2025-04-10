@@ -74,7 +74,7 @@ def measurement():
     # Check if the device is connected
     if gpib_connection.check_connection():
         terminal_output = [f"Connected to {gpib_connection.get_MAC()}",
-                        f"Instrument ID: {gpib_connection.get_device_id()}"]
+                          f"Instrument ID: {gpib_connection.get_device_id()}"]
         connection_status = "success"  # Connection is successful
     else:
         terminal_output = ["Error: No GPIB device detected. Please check the connection and address."]
