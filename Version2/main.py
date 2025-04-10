@@ -42,14 +42,22 @@ def home():
 def contributions():
     return render_template("contributions.html")
 
-@app.route('/connection')
-def connection():
-    # Check if the user is logged in
+@app.route('/measurement', methods=["GET", "POST"])
+def measurement():
+     # Check if the user is logged in
     if 'email' not in session:
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
     # Get the user information
+    user = get_user_by_email(session['email'])
+    
+    if not user:
+        flash("User not found. Please log in again.", "error")
+        return redirect(url_for("login"))
+
+     # code for connection
+     # Get the user information
     user = get_user_by_email(session['email'])
     
     # Check if the logged-in user is "DEMO"
@@ -66,29 +74,17 @@ def connection():
     # Check if the device is connected
     if gpib_connection.check_connection():
         terminal_output = [f"Connected to {gpib_connection.get_MAC()}",
-                           f"Instrument ID: {gpib_connection.get_device_id()}"]
+                        f"Instrument ID: {gpib_connection.get_device_id()}"]
+        connection_status = "success"  # Connection is successful
     else:
         terminal_output = ["Error: No GPIB device detected. Please check the connection and address."]
+        connection_status = "error"  # Connection failed
+
 
     # Disconnect after checking
     gpib_connection.disconnect()
 
-    return render_template("connection.html", terminal_output=terminal_output)
-
-@app.route('/measurement', methods=["GET", "POST"])
-def measurement():
-     # Check if the user is logged in
-    if 'email' not in session:
-        flash("Please log in to access this page.", "error")
-        return redirect(url_for("login"))
-
-    # Get the user information
-    user = get_user_by_email(session['email'])
-    
-    if not user:
-        flash("User not found. Please log in again.", "error")
-        return redirect(url_for("login"))
-
+    # code for measurement
     # Initialize settings in the session if not already present
     if "settings" not in session:
         session["settings"] = {
@@ -171,26 +167,74 @@ def measurement():
                 else:
                     flash("No data received during C-T measurement.", "error")
 
-    return render_template("measurement.html", connection_type=connection_type, settings=session["settings"])
+    return render_template("measurement.html", connection_type=connection_type, settings=session["settings"], terminal_output=terminal_output)
 
 
 @app.route('/graph')
 def graph():
+     # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Get the user information
+    user = get_user_by_email(session['email'])
+    
+    if not user:
+        flash("User not found. Please log in again.", "error")
+        return redirect(url_for("login"))
+
     return render_template("graph.html")
 
-@app.route('/documentation')
+@app.route('/documentation', methods=["GET", "POST"])
 def documentation():
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Get the user information
+    user = get_user_by_email(session['email'])
+    if not user:
+        flash("User not found. Please log in again.", "error")
+        return redirect(url_for("login"))
+
+    # Ensure the user is an admin
+    if user[5] == 0:  # Check the `is_admin` value
+        flash("You do not have permission to access this page.", "error")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        action = request.form.get("action")
+        user_id = request.form.get("user_id")
+
+        conn = sqlite3.connect(DB_path)
+        cursor = conn.cursor()
+
+        if action == "delete":
+            # Delete the user
+            cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            flash("User deleted successfully!", "success")
+        elif action == "grant_admin":
+            # Grant admin access
+            cursor.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (user_id,))
+            flash("Admin access granted!", "success")
+        elif action == "revoke_admin":
+            # Revoke admin access
+            cursor.execute("UPDATE users SET is_admin = 0 WHERE id = ?", (user_id,))
+            flash("Admin access revoked!", "success")
+
+        conn.commit()
+        conn.close()
+
     # Fetch all users from the database
     conn = sqlite3.connect(DB_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT first_name, last_name FROM users")  # Fetch only names for privacy
+    cursor.execute("SELECT first_name, last_name, email, id, is_admin FROM users")
     users = cursor.fetchall()
     conn.close()
 
-    formatted_users = [f"{user[0]} {user[1]}" for user in users]
-    
-    # Pass the user data to the template
-    return render_template("documentation.html", users=formatted_users)
+    return render_template("documentation.html", users=users)
 
 # USER PAGES ################################################################################################################################################
 @app.route('/login', methods=["POST", "GET"])
