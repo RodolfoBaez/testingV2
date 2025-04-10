@@ -77,6 +77,18 @@ def connection():
 
 @app.route('/measurement', methods=["GET", "POST"])
 def measurement():
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Get the user information
+    user = get_user_by_email(session['email'])
+    
+    if not user:
+        flash("User not found. Please log in again.", "error")
+        return redirect(url_for("login"))
+    
     # Initialize settings in the session if not already present
     if "settings" not in session:
         session["settings"] = {
@@ -89,7 +101,7 @@ def measurement():
         }
 
     # Check if the logged-in user is "DEMO" to determine the connection type
-    if session.get("username") == "DEMO":
+    if user[3] == "demo@example.com":
         gpib_connection = SimulatedVisaCon()
         gpib_connection.connect()  # Simulate connection
         connection_type = "Simulated Connection (DEMO Mode)"
@@ -97,17 +109,6 @@ def measurement():
         gpib_connection = VisaCon()
         gpib_connection.connect()  # Ensure real connection is established
         connection_type = "Real Connection to HP4280A"
-
-    # Create a controller instance
-    ctrl = controller(
-        conn=gpib_connection,
-        DC_V=session["settings"]["DC_V"],
-        Start_V=session["settings"]["Start_V"],
-        Stop_V=session["settings"]["Stop_V"],
-        Step_V=session["settings"]["Step_V"],
-        Hold_T=session["settings"]["Hold_T"],
-        Step_T=session["settings"]["Step_T"]
-    )
 
     if request.method == "POST":
         action = request.form.get("action")
@@ -121,46 +122,35 @@ def measurement():
                 "Hold_T": float(request.form['Hold_T']),
                 "Step_T": float(request.form['Step_T'])
             })
-            # Update controller settings
-            ctrl.set_DCV(session["settings"]["DC_V"])
-            ctrl.set_StartV(session["settings"]["Start_V"])
-            ctrl.set_StopV(session["settings"]["Stop_V"])
-            ctrl.set_StepV(session["settings"]["Step_V"])
-            ctrl.set_Hold_Time(session["settings"]["Hold_T"])
-            ctrl.set_StepT(session["settings"]["Step_T"])
             flash("Settings updated successfully!", "success")
         elif action == "start_measurement":
             # Get the measurement type
             measurement_type = request.form.get("measurement_type")
             
+            # Add measurement record to database
+            add_measurement(user_id=user[0], test_type=measurement_type)
+            
             # Create filename for CSV
-            uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
-            os.makedirs(uploads_dir, exist_ok=True)
-            filename = os.path.join(uploads_dir, f"{measurement_type}_measurement_{int(time.time())}.csv")
+            filename = f"{measurement_type}_measurement_{int(time.time())}.csv"
             
             # Perform measurement and save to CSV
-            if measurement_type == "cv":
-                ctrl.single_config()  # Configure the controller for single sweep
-                ctrl.init_sweep()  # Initialize the sweep
-                data = ctrl.read_data()  # Read the measurement data
-                if data:
-                    ctrl.mkcsv(data, filename)  # Generate the CSV file
-                    flash(f"C-V Measurement completed! Data saved to {filename}.", "success")
-                else:
-                    flash("No data received during C-V measurement.", "error")
-            elif measurement_type == "ct":
-                ctrl.set_ctfunc()  # Set C-T function
-                ctrl.default_CT()  # Configure the controller for C-T measurement
-                ctrl.init_sweep()  # Initialize the sweep
-                data = ctrl.read_data()  # Read the measurement data
-                if data:
-                    ctrl.mkcsv(data, filename)  # Generate the CSV file
-                    flash(f"C-T Measurement completed! Data saved to {filename}.", "success")
-                else:
-                    flash("No data received during C-T measurement.", "error")
+            with open(filename, mode="w", newline="") as file:
+                writer = csv.writer(file)
+                if measurement_type == "cv":
+                    writer.writerow(["Capacitance (C)", "Conductivity (G)", "Voltage (V)"])
+                    start_v = int(session["settings"]["Start_V"])
+                    stop_v = int(session["settings"]["Stop_V"]) + 1
+                    for v in range(start_v, stop_v):
+                        c, g = gpib_connection.query_measurement(v)
+                        writer.writerow([c, g, v])
+                elif measurement_type == "ct":
+                    writer.writerow(["Capacitance (C)", "Conductivity (G)", "Time (T)"])
+                    for t in range(0, 10):  # Simulate 10 time steps
+                        c, g = gpib_connection.query_measurement(t)
+                        writer.writerow([c, g, t])
+            flash(f"Measurement completed! Data saved to {filename}.", "success")
 
     return render_template("measurement.html", connection_type=connection_type, settings=session["settings"])
-
 
 @app.route('/graph')
 def graph():
