@@ -89,11 +89,11 @@ def measurement():
     if "settings" not in session:
         session["settings"] = {
             "DC_V": 5.0,
-            "Start_V": 0.0,
+            "Start_V": -5.0,
             "Stop_V": 5.0,
-            "Step_V": 0.1,
-            "Hold_T": 0.01,
-            "Step_T": 0.03
+            "Step_V": 0.5,
+            "Hold_T": 0.05,
+            "Step_T": 0.05
         }
 
     # Check if the logged-in user is "DEMO" to determine the connection type
