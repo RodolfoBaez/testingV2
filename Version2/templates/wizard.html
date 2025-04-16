@@ -316,6 +316,28 @@
     </form>
 </div>
 
+<form method="POST">
+    <input type="hidden" name="measurement_type" value="cv">
+
+    <!-- Bias Mode -->
+    <label for="bias_mode">Bias Mode:</label>
+    <select name="bias_mode" id="bias_mode" required>
+        <option value="dc">DC (Default)</option>
+        <option value="pulsed">Pulsed Sweep</option>
+    </select>
+
+    <!-- Pulse-Specific Settings -->
+    <div id="pulse_settings" style="display: none;">
+        <label for="pulse_width">Pulse Width (s):</label>
+        <input type="number" step="0.01" name="pulse_width" id="pulse_width" value="0.1">
+
+        <label for="pulse_amplitude">Pulse Amplitude (V):</label>
+        <input type="number" step="0.1" name="pulse_amplitude" id="pulse_amplitude" value="5.0">
+    </div>
+
+    <button type="submit">Start Measurement</button>
+</form>
+
 <script>
     // Toggle visibility of measurement-specific questions and graph setups
     document.getElementById('measurement_type').addEventListener('change', function () {
@@ -344,6 +366,18 @@
     // Toggle manual options for Y1-Axis (C-T)
     document.getElementById('y1_axis_ct').addEventListener('change', function () {
         document.getElementById('y1_axis_manual_ct').style.display = this.value === 'manual' ? 'block' : 'none';
+    });
+
+    // Show/Hide Pulse Settings Based on Bias Mode
+    const biasMode = document.getElementById("bias_mode");
+    const pulseSettings = document.getElementById("pulse_settings");
+
+    biasMode.addEventListener("change", function () {
+        if (this.value === "pulsed") {
+            pulseSettings.style.display = "block";
+        } else {
+            pulseSettings.style.display = "none";
+        }
     });
 </script>
 {% endblock %}

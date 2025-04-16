@@ -109,7 +109,7 @@ def measurement():
         if request.method == "POST":
             action = request.form.get("action")
             if action == "update_settings":
-                # Update settings
+                # Update general settings
                 session["settings"].update({
                     "DC_V": float(request.form['DC_V']),
                     "Start_V": float(request.form['Start_V']),
@@ -150,6 +150,16 @@ def measurement():
                         flash("C-T Measurement completed! Data saved successfully.", "success")
                     else:
                         flash("No data received during C-T measurement.", "error")
+                elif measurement_type == "pulse":
+                    # Configure pulse-specific settings
+                    pulse_width = float(request.form.get("pulse_width", 0.1))  # Default to 0.1 if not provided
+                    pulse_amplitude = float(request.form.get("pulse_amplitude", 5.0))  # Default to 5.0 if not provided
+                    ctrl.set_Pulse(pulse_amplitude)  # Set pulse amplitude
+                    ctrl.set_Measure_pulse(pulse_width)  # Set pulse width
+
+                    # Perform pulse sweep measurement
+                    ctrl.pulse_sweep()
+                    flash("Pulse Sweep Measurement completed! Data saved successfully.", "success")
 
         return render_template("measurement.html", connection_type="Real Connection", settings=session["settings"])
     except Exception as e:
@@ -182,6 +192,7 @@ def wizard():
 
         if request.method == "POST":
             measurement_type = request.form.get("measurement_type")
+            bias_mode = request.form.get("bias_mode")  # Retrieve the bias mode from the form
             graph_type = request.form.get("graph_type")
             x_axis = request.form.get("x_axis")
             y1_axis = request.form.get("y1_axis")
@@ -190,40 +201,38 @@ def wizard():
             # Perform measurement and save data
             data = None
             if measurement_type == "cv":
-                ctrl.single_config()
+                if bias_mode == "pulsed":
+                    # Configure pulse-specific settings
+                    pulse_width = float(request.form.get("pulse_width", 0.1))  # Default to 0.1 if not provided
+                    pulse_amplitude = float(request.form.get("pulse_amplitude", 5.0))  # Default to 5.0 if not provided
+                    ctrl.set_Pulse(pulse_amplitude)  # Set pulse amplitude
+                    ctrl.set_Measure_pulse(pulse_width)  # Set pulse width
+
+                    # Perform pulse sweep measurement
+                    ctrl.pulse_sweep()
+                    data = ctrl.read_data()
+                else:
+                    # Default CV measurement
+                    ctrl.single_config()
+                    ctrl.init_sweep()
+                    data = ctrl.read_data()
+            elif measurement_type == "ct":
+                ctrl.set_ctfunc()  # Set the instrument to C-T mode
+                ctrl.default_CT()  # Configure default C-T parameters
                 ctrl.init_sweep()
                 data = ctrl.read_data()
-            elif measurement_type == "ct":
-                ctrl.set_ctfunc()
-                ctrl.default_CT()
+            elif measurement_type == "cgt":
+                ctrl.set_cgtfunc()  # Set the instrument to C-G-T mode
+                ctrl.default_CT()  # Configure default C-G-T parameters
                 ctrl.init_sweep()
                 data = ctrl.read_data()
 
             if data:
-                # Preprocess the data to remove non-numeric prefixes (e.g., 'NCM+')
-                processed_data = []
-                for line in data.split('\n'):
-                    if line.strip():
-                        try:
-                            x, y = line.split(',')
-                            x = float(x.replace('NCM+', '').strip())
-                            y = float(y.strip())
-                            processed_data.append([x, y])
-                        except ValueError as e:
-                            print(f"Error processing line '{line}': {e}")
-                            continue
-
-                # Store the settings and processed data in the session for use in the wizard graph page
-                session["wizard_graph_settings"] = {
-                    "measurement_type": measurement_type,
-                    "graph_type": graph_type,
-                    "x_axis": x_axis,
-                    "y1_axis": y1_axis,
-                    "y2_axis": y2_axis,
-                    "data": processed_data
-                }
-                flash("Measurement completed successfully. Redirecting to wizard graph page...", "success")
-                return redirect(url_for("wizardgraph"))
+                # Save the data to a CSV file using the mkcsv function
+                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                filename = f"wizard_measurement_{timestamp}.csv"
+                ctrl.mkcsv(data, filename)
+                flash(f"Measurement completed successfully. Data saved to {filename}.", "success")
             else:
                 flash("No data received during measurement. Please try again.", "error")
 
