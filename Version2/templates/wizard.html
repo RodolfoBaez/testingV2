@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+{% block title %}Measurement Wizard{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h1>Measurement Wizard</h1>
+    <form id="wizard-form" method="POST" action="{{ url_for('wizard') }}">
+        <!-- Step 1: Select Measurement Type -->
+        <div class="form-group">
+            <label for="measurement_type">Select Measurement Type:</label>
+            <select class="form-control" id="measurement_type" name="measurement_type" required>
+                <option value="" disabled selected>Select an option</option>
+                <option value="cv">C-V Measurement</option>
+                <option value="ct">C-T Measurement</option>
+            </select>
+        </div>
+
+        <!-- Step 2: C-V Measurement Settings -->
+        <div id="cv-questions" class="additional-questions mt-3" style="display: none;">
+            <h3>C-V Measurement Settings</h3>
+
+            <!-- Connection Mode -->
+            <div class="form-group">
+                <label for="connection_mode">Connection Mode:</label>
+                <select class="form-control" id="connection_mode" name="connection_mode">
+                    <option value="floating" selected>Floating (Default)</option>
+                    <option value="grounded">Grounded</option>
+                </select>
+            </div>
+
+            <!-- Cable Length -->
+            <div class="form-group">
+                <label for="cable_length">Cable Length (m):</label>
+                <select class="form-control" id="cable_length" name="cable_length">
+                    <option value="0" selected>0 (Default)</option>
+                    <option value="1">1 m</option>
+                </select>
+            </div>
+
+            <!-- Function -->
+            <div class="form-group">
+                <label for="function">Function:</label>
+                <select class="form-control" id="function" name="function">
+                    <option value="cg" selected>C∙G (Default)</option>
+                    <option value="c">C</option>
+                    <option value="g">G</option>
+                </select>
+            </div>
+
+            <!-- Measurement Speed -->
+            <div class="form-group">
+                <label for="meas_speed">Measurement Speed:</label>
+                <select class="form-control" id="meas_speed" name="meas_speed">
+                    <option value="med" selected>Medium (Default)</option>
+                    <option value="fast">Fast</option>
+                    <option value="slow">Slow</option>
+                </select>
+            </div>
+
+            <!-- Measurement Range -->
+            <div class="form-group">
+                <label for="meas_range">Measurement Range:</label>
+                <select class="form-control" id="meas_range" name="meas_range">
+                    <option value="auto" selected>Auto (Default)</option>
+                    <option value="manual_10nf">Manual: 10 nF / 10 mS</option>
+                    <option value="manual_100pf">Manual: 100 pF / 1 mS</option>
+                    <option value="manual_10pf">Manual: 10 pF / 100 μS (Default)</option>
+                </select>
+            </div>
+
+            <!-- Sweep Mode -->
+            <div class="form-group">
+                <label for="sweep_mode">Sweep Mode:</label>
+                <select class="form-control" id="sweep_mode" name="sweep_mode">
+                    <option value="single" selected>Single (Default)</option>
+                    <option value="repeat">Repeat</option>
+                    <option value="ext">EXT</option>
+                </select>
+            </div>
+
+            <!-- Bias Mode -->
+            <div class="form-group">
+                <label for="bias_mode">Bias Mode:</label>
+                <select class="form-control" id="bias_mode" name="bias_mode">
+                    <option value="dc" selected>DC (Default)</option>
+                    <option value="single">Single</option>
+                    <option value="double">Double</option>
+                    <option value="pulsed">Pulsed Sweep</option>
+                </select>
+            </div>
+
+            <!-- Bias Parameters -->
+            <div class="form-group">
+                <label for="dc_voltage">DC Voltage (V):</label>
+                <input type="number" class="form-control" id="dc_voltage" name="dc_voltage" value="5" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="start_voltage">Start Voltage (V):</label>
+                <input type="number" class="form-control" id="start_voltage" name="start_voltage" value="0" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="stop_voltage">Stop Voltage (V):</label>
+                <input type="number" class="form-control" id="stop_voltage" name="stop_voltage" value="5" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="step_voltage">Step Voltage (V):</label>
+                <input type="number" class="form-control" id="step_voltage" name="step_voltage" value="0.1" step="0.01">
+            </div>
+            <div class="form-group">
+                <label for="hold_time">Hold Time (s):</label>
+                <input type="number" class="form-control" id="hold_time" name="hold_time" value="0.01" step="0.01">
+            </div>
+            <div class="form-group">
+                <label for="step_delay">Step Delay (s):</label>
+                <input type="number" class="form-control" id="step_delay" name="step_delay" value="0" step="0.01">
+            </div>
+
+            <!-- Signal Level -->
+            <div class="form-group">
+                <label for="sig_level">Signal Level (mV):</label>
+                <select class="form-control" id="sig_level" name="sig_level">
+                    <option value="30" selected>30 (Default)</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Step 3: C-T Measurement Settings -->
+        <div id="ct-questions" class="additional-questions mt-3" style="display: none;">
+            <h3>C-T Measurement Settings</h3>
+
+            <!-- Connection Mode -->
+            <div class="form-group">
+                <label for="connection_mode_ct">Connection Mode:</label>
+                <select class="form-control" id="connection_mode_ct" name="connection_mode_ct">
+                    <option value="floating" selected>Floating (Default)</option>
+                    <option value="grounded">Grounded</option>
+                </select>
+            </div>
+
+            <!-- Cable Length -->
+            <div class="form-group">
+                <label for="cable_length_ct">Cable Length (m):</label>
+                <select class="form-control" id="cable_length_ct" name="cable_length_ct">
+                    <option value="0" selected>0 (Default)</option>
+                    <option value="1">1 m</option>
+                </select>
+            </div>
+
+            <!-- Function -->
+            <div class="form-group">
+                <label for="function_ct">Function:</label>
+                <select class="form-control" id="function_ct" name="function_ct">
+                    <option value="cgt" selected>C∙G∙t (Default)</option>
+                    <option value="ct">C∙t</option>
+                    <option value="gt">G∙t</option>
+                </select>
+            </div>
+
+            <!-- Measurement Speed -->
+            <div class="form-group">
+                <label for="meas_speed_ct">Measurement Speed:</label>
+                <select class="form-control" id="meas_speed_ct" name="meas_speed_ct">
+                    <option value="med" selected>Medium (Default)</option>
+                    <option value="fast">Fast</option>
+                    <option value="slow">Slow</option>
+                </select>
+            </div>
+
+            <!-- Measurement Range -->
+            <div class="form-group">
+                <label for="meas_range_ct">Measurement Range:</label>
+                <select class="form-control" id="meas_range_ct" name="meas_range_ct">
+                    <option value="auto" selected>Auto (Default)</option>
+                    <option value="manual_10nf">Manual: 10 nF / 10 mS</option>
+                    <option value="manual_100pf">Manual: 100 pF / 1 mS</option>
+                    <option value="manual_10pf">Manual: 10 pF / 100 μS (Default)</option>
+                </select>
+            </div>
+
+            <!-- Sweep Mode -->
+            <div class="form-group">
+                <label for="sweep_mode_ct">Sweep Mode:</label>
+                <select class="form-control" id="sweep_mode_ct" name="sweep_mode_ct">
+                    <option value="single" selected>Single (Default)</option>
+                    <option value="repeat">Repeat</option>
+                    <option value="ext">EXT</option>
+                </select>
+            </div>
+
+            <!-- Operational Parameters -->
+            <div class="form-group">
+                <label for="pulse_voltage">Pulse Voltage (V):</label>
+                <input type="number" class="form-control" id="pulse_voltage" name="pulse_voltage" value="0" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="meas_voltage">Measurement Voltage (V):</label>
+                <input type="number" class="form-control" id="meas_voltage" name="meas_voltage" value="0" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="num_readings">Number of Readings:</label>
+                <input type="number" class="form-control" id="num_readings" name="num_readings" value="10" step="1">
+            </div>
+            <div class="form-group">
+                <label for="bias_pulse_width">Bias Pulse Width (s):</label>
+                <input type="number" class="form-control" id="bias_pulse_width" name="bias_pulse_width" value="1" step="0.1">
+            </div>
+            <div class="form-group">
+                <label for="meas_interval">Measurement Interval (s):</label>
+                <input type="number" class="form-control" id="meas_interval" name="meas_interval" value="0.1" step="0.01">
+            </div>
+
+            <!-- Signal Level -->
+            <div class="form-group">
+                <label for="sig_level_ct">Signal Level (mV):</label>
+                <select class="form-control" id="sig_level_ct" name="sig_level_ct">
+                    <option value="30" selected>30 (Default)</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Step 4: Graph Setup for C-V -->
+        <div id="graph-setup-cv" class="mt-4" style="display: none;">
+            <h3>Graph Setup for C-V</h3>
+            <!-- Graph Type -->
+            <div class="form-group">
+                <label for="graph_type_cv">Graph Type:</label>
+                <select class="form-control" id="graph_type_cv" name="graph_type_cv">
+                    <option value="cv" selected>C-V (Default)</option>
+                    <option value="gv">G-V</option>
+                    <option value="cgv">C∙G-V</option>
+                </select>
+            </div>
+            <!-- X-Axis Options -->
+            <div class="form-group">
+                <label for="x_axis_cv">X-Axis Options:</label>
+                <select class="form-control" id="x_axis_cv" name="x_axis_cv">
+                    <option value="auto" selected>Auto Scale</option>
+                    <option value="manual">Manual</option>
+                </select>
+                <div id="x_axis_manual_cv" class="mt-2" style="display: none;">
+                    <label for="x_min_cv">Min:</label>
+                    <input type="number" class="form-control" id="x_min_cv" name="x_min_cv" step="0.1">
+                    <label for="x_max_cv">Max:</label>
+                    <input type="number" class="form-control" id="x_max_cv" name="x_max_cv" step="0.1">
+                    <label for="x_interval_cv">Interval:</label>
+                    <input type="number" class="form-control" id="x_interval_cv" name="x_interval_cv" step="0.1">
+                </div>
+            </div>
+            <!-- Y1-Axis Options -->
+            <div class="form-group">
+                <label for="y1_axis_cv">Y1-Axis Options:</label>
+                <select class="form-control" id="y1_axis_cv" name="y1_axis_cv">
+                    <option value="auto" selected>Auto Scale</option>
+                    <option value="manual">Manual</option>
+                </select>
+                <div id="y1_axis_manual_cv" class="mt-2" style="display: none;">
+                    <label for="y1_min_cv">Min:</label>
+                    <input type="number" class="form-control" id="y1_min_cv" name="y1_min_cv" step="0.1">
+                    <label for="y1_max_cv">Max:</label>
+                    <input type="number" class="form-control" id="y1_max_cv" name="y1_max_cv" step="0.1">
+                    <label for="y1_interval_cv">Interval:</label>
+                    <input type="number" class="form-control" id="y1_interval_cv" name="y1_interval_cv" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <!-- Graph Setup for C-T -->
+        <div id="graph-setup-ct" class="mt-4" style="display: none;">
+            <h3>Graph Setup for C-T</h3>
+            <!-- Graph Type -->
+            <div class="form-group">
+                <label for="graph_type_ct">Graph Type:</label>
+                <select class="form-control" id="graph_type_ct" name="graph_type_ct">
+                    <option value="ct" selected>C-t (Default)</option>
+                    <option value="gt">G-t</option>
+                    <option value="cgt">C∙G-t</option>
+                </select>
+            </div>
+            <!-- X-Axis Options -->
+            <div class="form-group">
+                <label for="x_axis_ct">X-Axis Options:</label>
+                <select class="form-control" id="x_axis_ct" name="x_axis_ct">
+                    <option value="auto" selected>Auto Scale</option>
+                    <option value="manual">Manual</option>
+                </select>
+                <div id="x_axis_manual_ct" class="mt-2" style="display: none;">
+                    <label for="x_min_ct">Min:</label>
+                    <input type="number" class="form-control" id="x_min_ct" name="x_min_ct" step="0.1">
+                    <label for="x_max_ct">Max:</label>
+                    <input type="number" class="form-control" id="x_max_ct" name="x_max_ct" step="0.1">
+                    <label for="x_interval_ct">Interval:</label>
+                    <input type="number" class="form-control" id="x_interval_ct" name="x_interval_ct" step="0.1">
+                </div>
+            </div>
+            <!-- Y1-Axis Options -->
+            <div class="form-group">
+                <label for="y1_axis_ct">Y1-Axis Options:</label>
+                <select class="form-control" id="y1_axis_ct" name="y1_axis_ct">
+                    <option value="auto" selected>Auto Scale</option>
+                    <option value="manual">Manual</option>
+                </select>
+                <div id="y1_axis_manual_ct" class="mt-2" style="display: none;">
+                    <label for="y1_min_ct">Min:</label>
+                    <input type="number" class="form-control" id="y1_min_ct" name="y1_min_ct" step="0.1">
+                    <label for="y1_max_ct">Max:</label>
+                    <input type="number" class="form-control" id="y1_max_ct" name="y1_max_ct" step="0.1">
+                    <label for="y1_interval_ct">Interval:</label>
+                    <input type="number" class="form-control" id="y1_interval_ct" name="y1_interval_ct" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary mt-3">Submit</button>
+    </form>
+</div>
+
+<script>
+    // Toggle visibility of measurement-specific questions and graph setups
+    document.getElementById('measurement_type').addEventListener('change', function () {
+        const measurementType = this.value;
+        document.getElementById('cv-questions').style.display = measurementType === 'cv' ? 'block' : 'none';
+        document.getElementById('ct-questions').style.display = measurementType === 'ct' ? 'block' : 'none';
+        document.getElementById('graph-setup-cv').style.display = measurementType === 'cv' ? 'block' : 'none';
+        document.getElementById('graph-setup-ct').style.display = measurementType === 'ct' ? 'block' : 'none';
+    });
+
+    // Toggle manual options for X-Axis (C-V)
+    document.getElementById('x_axis_cv').addEventListener('change', function () {
+        document.getElementById('x_axis_manual_cv').style.display = this.value === 'manual' ? 'block' : 'none';
+    });
+
+    // Toggle manual options for X-Axis (C-T)
+    document.getElementById('x_axis_ct').addEventListener('change', function () {
+        document.getElementById('x_axis_manual_ct').style.display = this.value === 'manual' ? 'block' : 'none';
+    });
+
+    // Toggle manual options for Y1-Axis (C-V)
+    document.getElementById('y1_axis_cv').addEventListener('change', function () {
+        document.getElementById('y1_axis_manual_cv').style.display = this.value === 'manual' ? 'block' : 'none';
+    });
+
+    // Toggle manual options for Y1-Axis (C-T)
+    document.getElementById('y1_axis_ct').addEventListener('change', function () {
+        document.getElementById('y1_axis_manual_ct').style.display = this.value === 'manual' ? 'block' : 'none';
+    });
+</script>
+{% endblock %}

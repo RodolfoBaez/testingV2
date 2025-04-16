@@ -158,19 +158,68 @@ def measurement():
 
 @app.route('/graph')
 def graph():
-     # Check if the user is logged in
+    # Check if the user is logged in
     if 'email' not in session:
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
     # Get the user information
     user = get_user_by_email(session['email'])
-    
     if not user:
         flash("User not found. Please log in again.", "error")
         return redirect(url_for("login"))
 
-    return render_template("graph.html")
+    # Retrieve graph settings from the session
+    graph_settings = session.get("graph_settings")
+    if not graph_settings:
+        flash("No graph settings found. Please set up the measurement first.", "error")
+        return redirect(url_for("wizard"))
+
+    # Start the graph process (this is a placeholder for actual graph logic)
+    measurement_type = graph_settings["measurement_type"]
+    graph_type = graph_settings["graph_type"]
+    x_axis = graph_settings["x_axis"]
+    y1_axis = graph_settings["y1_axis"]
+    y2_axis = graph_settings.get("y2_axis")
+
+    # Example: Pass the settings to the graph template
+    return render_template("graph.html", graph_settings=graph_settings)
+
+@app.route('/wizard', methods=["GET", "POST"])
+def wizard():
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Get the user information
+    user = get_user_by_email(session['email'])
+    if not user:
+        flash("User not found. Please log in again.", "error")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        # Process the form data
+        measurement_type = request.form.get("measurement_type")
+        graph_type = request.form.get("graph_type")
+        x_axis = request.form.get("x_axis")
+        y1_axis = request.form.get("y1_axis")
+        y2_axis = request.form.get("y2_axis") if graph_type == "cgv" else None
+
+        # Store the settings in the session for use in the wizard graph page
+        session["wizard_graph_settings"] = {
+            "measurement_type": measurement_type,
+            "graph_type": graph_type,
+            "x_axis": x_axis,
+            "y1_axis": y1_axis,
+            "y2_axis": y2_axis,
+        }
+
+        # Redirect to the wizard graph page
+        flash("Measurement setup confirmed. Redirecting to wizard graph page...", "success")
+        return redirect(url_for("wizardgraph"))
+
+    return render_template("wizard.html")
 
 @app.route('/documentation', methods=["GET", "POST"])
 def documentation():
@@ -221,6 +270,33 @@ def documentation():
     conn.close()
 
     return render_template("documentation.html", users=users)
+
+@app.route('/pulse_graph')
+def pulsegraph():
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Render the pulse graph page
+    return render_template("pulsegraph.html")
+
+
+@app.route('/wizard_graph')
+def wizardgraph():
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Retrieve graph settings from the session
+    wizard_graph_settings = session.get("wizard_graph_settings")
+    if not wizard_graph_settings:
+        flash("No graph settings found. Please set up the measurement first.", "error")
+        return redirect(url_for("wizard"))
+
+    # Render the wizard graph page with the settings
+    return render_template("wizardgraph.html", graph_settings=wizard_graph_settings)
 
 # USER PAGES ################################################################################################################################################
 @app.route('/login', methods=["POST", "GET"])

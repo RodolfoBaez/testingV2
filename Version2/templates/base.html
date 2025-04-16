@@ -65,6 +65,16 @@
                 padding: 10px 20px;
             }
         }
+
+        /* Show dropdown menu on hover */
+        .nav-item.dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        /* Ensure dropdown menu stays visible */
+        .dropdown-menu {
+            margin-top: 0;
+        }
     </style>
 </head>
 <body>
@@ -88,7 +98,18 @@
                         <a class="nav-link" href="/measurement">Measurement</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/graph">Graph</a>
+                        <a class="nav-link" href="/wizard">Wizard</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                          Graphing
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                          <a class="dropdown-item" href="/graph">Manual Graph</a>
+                          <div class="dropdown-divider"></div>
+                          <a class="dropdown-item" href="/pulse_graph">Pulse Graph</a>
+                          <a class="dropdown-item" href="/wizard_graph">Wizard Graph</a>
+                        </div>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/documentation">Admin Controller</a>
