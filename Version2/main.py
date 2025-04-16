@@ -32,6 +32,9 @@ def inject_user_info():
             return {'username': f"{user[1]} {user[2]}", 'user_id': user[0], 'email': user[3]}
     return {'username': None, 'user_id': None, 'email': None}
 
+# Global Dictionary to store GPIB connection through session ID
+gpib_connections = {}
+
 # GENERAL PAGES ###############################################################################################################################################
 
 @app.route('/')
@@ -44,47 +47,40 @@ def contributions():
 
 @app.route('/measurement', methods=["GET", "POST"])
 def measurement():
-     # Check if the user is logged in
+    # Check if the user is logged in
     if 'email' not in session:
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
     # Get the user information
     user = get_user_by_email(session['email'])
-    
     if not user:
         flash("User not found. Please log in again.", "error")
         return redirect(url_for("login"))
 
-     # code for connection
-     # Get the user information
-    user = get_user_by_email(session['email'])
-    
-    # Check if the logged-in user is "DEMO"
-    if user and user[3] == "demo@example.com":
-        # Use the simulated VisaCon class for the DEMO user
+    # Determine the connection type
+    if user[3] == "demo@example.com":
         gpib_connection = SimulatedVisaCon()
     else:
-        # Use the real VisaCon class for other users
         gpib_connection = VisaCon()
 
-    # Connect to the device
-    gpib_connection.connect()
-
-    # Check if the device is connected
-    if gpib_connection.check_connection():
-        terminal_output = [f"Connected to {gpib_connection.get_MAC()}",
-                          f"Instrument ID: {gpib_connection.get_device_id()}"]
-        connection_status = "success"  # Connection is successful
+    # Check if a connection already exists for this session
+    session_id = session.get('email')
+    if session_id not in gpib_connections:
+        gpib_connection.connect()
+        if gpib_connection.check_connection():
+            gpib_connections[session_id] = gpib_connection
+            terminal_output = [f"Connected to {gpib_connection.get_MAC()}",
+                               f"Instrument ID: {gpib_connection.get_device_id()}"]
+            connection_status = "success"
+        else:
+            terminal_output = ["Error: No GPIB device detected. Please check the connection and address."]
+            connection_status = "error"
     else:
-        terminal_output = ["Error: No GPIB device detected. Please check the connection and address."]
-        connection_status = "error"  # Connection failed
+        gpib_connection = gpib_connections[session_id]
+        terminal_output = [f"Reusing existing connection to {gpib_connection.get_MAC()}"]
+        connection_status = "success"
 
-
-    # Disconnect after checking
-    gpib_connection.disconnect()
-
-    # code for measurement
     # Initialize settings in the session if not already present
     if "settings" not in session:
         session["settings"] = {
@@ -95,16 +91,6 @@ def measurement():
             "Hold_T": 0.05,
             "Step_T": 0.05
         }
-
-    # Check if the logged-in user is "DEMO" to determine the connection type
-    if user[3] == "demo@example.com":
-        gpib_connection = SimulatedVisaCon()
-        gpib_connection.connect()  # Simulate connection
-        connection_type = "Simulated Connection (DEMO Mode)"
-    else:
-        gpib_connection = VisaCon()
-        gpib_connection.connect()  # Ensure real connection is established
-        connection_type = "Real Connection to HP4280A"
 
     # Create a controller instance
     ctrl = controller(
@@ -167,7 +153,7 @@ def measurement():
                 else:
                     flash("No data received during C-T measurement.", "error")
 
-    return render_template("measurement.html", connection_type=connection_type, settings=session["settings"], terminal_output=terminal_output)
+    return render_template("measurement.html", connection_type="Real Connection", settings=session["settings"], terminal_output=terminal_output)
 
 
 @app.route('/graph')
@@ -283,6 +269,10 @@ def register():
 
 @app.route('/logout')
 def logout():
+    session_id = session.get('email')
+    if session_id in gpib_connections:
+        gpib_connections[session_id].disconnect()
+        del gpib_connections[session_id]
     session.pop("email", None)  # Remove email from session
     flash("You have been logged out.", "success")
     return redirect(url_for("home"))
