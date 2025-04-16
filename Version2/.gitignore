@@ -2,4 +2,5 @@ activate_venv.bat
 controller.py
 deactivate_venv.bat
 visacon.py
+testscript.py
 /uploads/

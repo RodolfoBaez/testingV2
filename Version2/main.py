@@ -32,8 +32,55 @@ def inject_user_info():
             return {'username': f"{user[1]} {user[2]}", 'user_id': user[0], 'email': user[3]}
     return {'username': None, 'user_id': None, 'email': None}
 
-# Global Dictionary to store GPIB connection through session ID
+# Global Dictionary to store controller instances through session ID
 gpib_connections = {}
+
+def get_controller():
+    """Retrieve or create a controller instance for the current session."""
+    session_id = session.get('email')
+    if not session_id:
+        raise Exception("No session ID found. User must be logged in.")
+
+    if session_id not in gpib_connections:
+        # Determine the connection type
+        user = get_user_by_email(session_id)
+        if not user:
+            raise Exception("User not found.")
+
+        if user[3] == "demo@example.com":
+            gpib_connection = SimulatedVisaCon()
+        else:
+            gpib_connection = VisaCon()
+
+        # Connect the GPIB connection
+        gpib_connection.connect()
+        if not gpib_connection.check_connection():
+            raise Exception("Failed to connect to the GPIB device.")
+
+        # Create a controller instance and store it in the dictionary
+        gpib_connections[session_id] = controller(
+            conn=gpib_connection,
+            DC_V=5.0,
+            Start_V=-5.0,
+            Stop_V=5.0,
+            Step_V=0.5,
+            Hold_T=0.05,
+            Step_T=0.05
+        )
+
+    return gpib_connections[session_id]
+
+def initialize_settings():
+    """Initialize session settings with default values if not already set."""
+    if "settings" not in session:
+        session["settings"] = {
+            "DC_V": 5.0,
+            "Start_V": -5.0,
+            "Stop_V": 5.0,
+            "Step_V": 0.5,
+            "Hold_T": 0.05,
+            "Step_T": 0.05
+        }
 
 # GENERAL PAGES ###############################################################################################################################################
 
@@ -52,138 +99,72 @@ def measurement():
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
-    # Get the user information
-    user = get_user_by_email(session['email'])
-    if not user:
-        flash("User not found. Please log in again.", "error")
-        return redirect(url_for("login"))
+    # Initialize settings if not already set
+    initialize_settings()
 
-    # Determine the connection type
-    if user[3] == "demo@example.com":
-        gpib_connection = SimulatedVisaCon()
-    else:
-        gpib_connection = VisaCon()
+    try:
+        # Get the controller instance
+        ctrl = get_controller()
 
-    # Check if a connection already exists for this session
-    session_id = session.get('email')
-    if session_id not in gpib_connections:
-        gpib_connection.connect()
-        if gpib_connection.check_connection():
-            gpib_connections[session_id] = gpib_connection
-            terminal_output = [f"Connected to {gpib_connection.get_MAC()}",
-                               f"Instrument ID: {gpib_connection.get_device_id()}"]
-            connection_status = "success"
-        else:
-            terminal_output = ["Error: No GPIB device detected. Please check the connection and address."]
-            connection_status = "error"
-    else:
-        gpib_connection = gpib_connections[session_id]
-        terminal_output = [f"Reusing existing connection to {gpib_connection.get_MAC()}"]
-        connection_status = "success"
+        if request.method == "POST":
+            action = request.form.get("action")
+            if action == "update_settings":
+                # Update settings
+                session["settings"].update({
+                    "DC_V": float(request.form['DC_V']),
+                    "Start_V": float(request.form['Start_V']),
+                    "Stop_V": float(request.form['Stop_V']),
+                    "Step_V": float(request.form['Step_V']),
+                    "Hold_T": float(request.form['Hold_T']),
+                    "Step_T": float(request.form['Step_T'])
+                })
+                # Update controller settings
+                ctrl.set_DCV(session["settings"]["DC_V"])
+                ctrl.set_StartV(session["settings"]["Start_V"])
+                ctrl.set_StopV(session["settings"]["Stop_V"])
+                ctrl.set_StepV(session["settings"]["Step_V"])
+                ctrl.set_Hold_Time(session["settings"]["Hold_T"])
+                ctrl.set_StepT(session["settings"]["Step_T"])
+                flash("Settings updated successfully!", "success")
+            elif action == "start_measurement":
+                # Get the measurement type
+                measurement_type = request.form.get("measurement_type")
 
-    # Initialize settings in the session if not already present
-    if "settings" not in session:
-        session["settings"] = {
-            "DC_V": 5.0,
-            "Start_V": -5.0,
-            "Stop_V": 5.0,
-            "Step_V": 0.5,
-            "Hold_T": 0.05,
-            "Step_T": 0.05
-        }
+                # Perform measurement and save to CSV
+                if measurement_type == "cv":
+                    ctrl.single_config()
+                    ctrl.init_sweep()
+                    data = ctrl.read_data()
+                    if data:
+                        ctrl.mkcsv(data)
+                        flash("C-V Measurement completed! Data saved successfully.", "success")
+                    else:
+                        flash("No data received during C-V measurement.", "error")
+                elif measurement_type == "ct":
+                    ctrl.set_ctfunc()
+                    ctrl.default_CT()
+                    ctrl.init_sweep()
+                    data = ctrl.read_data()
+                    if data:
+                        ctrl.mkcsv(data)
+                        flash("C-T Measurement completed! Data saved successfully.", "success")
+                    else:
+                        flash("No data received during C-T measurement.", "error")
 
-    # Create a controller instance
-    ctrl = controller(
-        conn=gpib_connection,
-        DC_V=session["settings"]["DC_V"],
-        Start_V=session["settings"]["Start_V"],
-        Stop_V=session["settings"]["Stop_V"],
-        Step_V=session["settings"]["Step_V"],
-        Hold_T=session["settings"]["Hold_T"],
-        Step_T=session["settings"]["Step_T"]
-    )
+        return render_template("measurement.html", connection_type="Real Connection", settings=session["settings"])
+    except Exception as e:
+        flash(f"Error: {str(e)}", "error")
+        return redirect(url_for("home"))
 
-    if request.method == "POST":
-        action = request.form.get("action")
-        if action == "update_settings":
-            # Update settings
-            session["settings"].update({
-                "DC_V": float(request.form['DC_V']),
-                "Start_V": float(request.form['Start_V']),
-                "Stop_V": float(request.form['Stop_V']),
-                "Step_V": float(request.form['Step_V']),
-                "Hold_T": float(request.form['Hold_T']),
-                "Step_T": float(request.form['Step_T'])
-            })
-            # Update controller settings
-            ctrl.set_DCV(session["settings"]["DC_V"])
-            ctrl.set_StartV(session["settings"]["Start_V"])
-            ctrl.set_StopV(session["settings"]["Stop_V"])
-            ctrl.set_StepV(session["settings"]["Step_V"])
-            ctrl.set_Hold_Time(session["settings"]["Hold_T"])
-            ctrl.set_StepT(session["settings"]["Step_T"])
-            flash("Settings updated successfully!", "success")
-        elif action == "start_measurement":
-            # Get the measurement type
-            measurement_type = request.form.get("measurement_type")
-            
-            # Create filename for CSV
-            uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
-            os.makedirs(uploads_dir, exist_ok=True)
-            filename = os.path.join(uploads_dir, f"{measurement_type}_measurement_{int(time.time())}.csv")
-            
-            # Perform measurement and save to CSV
-            if measurement_type == "cv":
-                ctrl.single_config()  # Configure the controller for single sweep
-                ctrl.init_sweep()  # Initialize the sweep
-                data = ctrl.read_data()  # Read the measurement data
-                if data:
-                    ctrl.mkcsv(data, filename)  # Generate the CSV file
-                    flash(f"C-V Measurement completed! Data saved to {filename}.", "success")
-                else:
-                    flash("No data received during C-V measurement.", "error")
-            elif measurement_type == "ct":
-                ctrl.set_ctfunc()  # Set C-T function
-                ctrl.default_CT()  # Configure the controller for C-T measurement
-                ctrl.init_sweep()  # Initialize the sweep
-                data = ctrl.read_data()  # Read the measurement data
-                if data:
-                    ctrl.mkcsv(data, filename)  # Generate the CSV file
-                    flash(f"C-T Measurement completed! Data saved to {filename}.", "success")
-                else:
-                    flash("No data received during C-T measurement.", "error")
-
-    return render_template("measurement.html", connection_type="Real Connection", settings=session["settings"], terminal_output=terminal_output)
-
-
-@app.route('/graph')
+@app.route('/graph', methods=["GET", "POST"])
 def graph():
     # Check if the user is logged in
     if 'email' not in session:
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
-    # Get the user information
-    user = get_user_by_email(session['email'])
-    if not user:
-        flash("User not found. Please log in again.", "error")
-        return redirect(url_for("login"))
-
-    # Retrieve graph settings from the session
-    graph_settings = session.get("graph_settings")
-    if not graph_settings:
-        flash("No graph settings found. Please set up the measurement first.", "error")
-        return redirect(url_for("wizard"))
-
-    # Start the graph process (this is a placeholder for actual graph logic)
-    measurement_type = graph_settings["measurement_type"]
-    graph_type = graph_settings["graph_type"]
-    x_axis = graph_settings["x_axis"]
-    y1_axis = graph_settings["y1_axis"]
-    y2_axis = graph_settings.get("y2_axis")
-
-    # Example: Pass the settings to the graph template
-    return render_template("graph.html", graph_settings=graph_settings)
+    # Render the splice graph page
+    return render_template("graph.html")
 
 @app.route('/wizard', methods=["GET", "POST"])
 def wizard():
@@ -192,34 +173,64 @@ def wizard():
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
-    # Get the user information
-    user = get_user_by_email(session['email'])
-    if not user:
-        flash("User not found. Please log in again.", "error")
-        return redirect(url_for("login"))
+    # Initialize settings if not already set
+    initialize_settings()
 
-    if request.method == "POST":
-        # Process the form data
-        measurement_type = request.form.get("measurement_type")
-        graph_type = request.form.get("graph_type")
-        x_axis = request.form.get("x_axis")
-        y1_axis = request.form.get("y1_axis")
-        y2_axis = request.form.get("y2_axis") if graph_type == "cgv" else None
+    try:
+        # Get the controller instance
+        ctrl = get_controller()
 
-        # Store the settings in the session for use in the wizard graph page
-        session["wizard_graph_settings"] = {
-            "measurement_type": measurement_type,
-            "graph_type": graph_type,
-            "x_axis": x_axis,
-            "y1_axis": y1_axis,
-            "y2_axis": y2_axis,
-        }
+        if request.method == "POST":
+            measurement_type = request.form.get("measurement_type")
+            graph_type = request.form.get("graph_type")
+            x_axis = request.form.get("x_axis")
+            y1_axis = request.form.get("y1_axis")
+            y2_axis = request.form.get("y2_axis") if graph_type == "cgv" else None
 
-        # Redirect to the wizard graph page
-        flash("Measurement setup confirmed. Redirecting to wizard graph page...", "success")
-        return redirect(url_for("wizardgraph"))
+            # Perform measurement and save data
+            data = None
+            if measurement_type == "cv":
+                ctrl.single_config()
+                ctrl.init_sweep()
+                data = ctrl.read_data()
+            elif measurement_type == "ct":
+                ctrl.set_ctfunc()
+                ctrl.default_CT()
+                ctrl.init_sweep()
+                data = ctrl.read_data()
 
-    return render_template("wizard.html")
+            if data:
+                # Preprocess the data to remove non-numeric prefixes (e.g., 'NCM+')
+                processed_data = []
+                for line in data.split('\n'):
+                    if line.strip():
+                        try:
+                            x, y = line.split(',')
+                            x = float(x.replace('NCM+', '').strip())
+                            y = float(y.strip())
+                            processed_data.append([x, y])
+                        except ValueError as e:
+                            print(f"Error processing line '{line}': {e}")
+                            continue
+
+                # Store the settings and processed data in the session for use in the wizard graph page
+                session["wizard_graph_settings"] = {
+                    "measurement_type": measurement_type,
+                    "graph_type": graph_type,
+                    "x_axis": x_axis,
+                    "y1_axis": y1_axis,
+                    "y2_axis": y2_axis,
+                    "data": processed_data
+                }
+                flash("Measurement completed successfully. Redirecting to wizard graph page...", "success")
+                return redirect(url_for("wizardgraph"))
+            else:
+                flash("No data received during measurement. Please try again.", "error")
+
+        return render_template("wizard.html", connection_type="Real Connection", settings=session["settings"])
+    except Exception as e:
+        flash(f"Error: {str(e)}", "error")
+        return redirect(url_for("home"))
 
 @app.route('/documentation', methods=["GET", "POST"])
 def documentation():
@@ -281,7 +292,6 @@ def pulsegraph():
     # Render the pulse graph page
     return render_template("pulsegraph.html")
 
-
 @app.route('/wizard_graph')
 def wizardgraph():
     # Check if the user is logged in
@@ -289,14 +299,50 @@ def wizardgraph():
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
-    # Retrieve graph settings from the session
+    # Retrieve graph settings and data from the session
     wizard_graph_settings = session.get("wizard_graph_settings")
-    if not wizard_graph_settings:
-        flash("No graph settings found. Please set up the measurement first.", "error")
+    if not wizard_graph_settings or not wizard_graph_settings.get("data"):
+        flash("No graph settings or data found. Please set up the measurement first.", "error")
         return redirect(url_for("wizard"))
 
-    # Render the wizard graph page with the settings
+    # Debugging: Print the graph settings to the console
+    print("Wizard Graph Settings:", wizard_graph_settings)
+
+    # Render the wizard graph page with the settings and data
     return render_template("wizardgraph.html", graph_settings=wizard_graph_settings)
+
+@app.route('/reset_connection', methods=["POST"])
+def reset_connection():
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Get the user information
+    session_id = session.get('email')
+    if session_id in gpib_connections:
+        gpib_connection = gpib_connections[session_id]
+        try:
+            # Create a controller instance
+            ctrl = controller(
+                conn=gpib_connection,
+                DC_V=session["settings"]["DC_V"],
+                Start_V=session["settings"]["Start_V"],
+                Stop_V=session["settings"]["Stop_V"],
+                Step_V=session["settings"]["Step_V"],
+                Hold_T=session["settings"]["Hold_T"],
+                Step_T=session["settings"]["Step_T"]
+            )
+
+            # Use the controller's clear function
+            ctrl.clear()
+            flash("Connection reset successfully!", "success")
+        except Exception as e:
+            flash(f"Error resetting connection: {str(e)}", "error")
+    else:
+        flash("No active connection found to reset.", "error")
+
+    return redirect(request.referrer or url_for("home"))
 
 # USER PAGES ################################################################################################################################################
 @app.route('/login', methods=["POST", "GET"])
@@ -347,8 +393,10 @@ def register():
 def logout():
     session_id = session.get('email')
     if session_id in gpib_connections:
-        gpib_connections[session_id].disconnect()
-        del gpib_connections[session_id]
+        ctrl = gpib_connections[session_id]  # Get the controller instance
+        if hasattr(ctrl, 'conn') and hasattr(ctrl.conn, 'disconnect'):
+            ctrl.conn.disconnect()  # Disconnect the GPIB connection
+        del gpib_connections[session_id]  # Remove the controller instance from the dictionary
     session.pop("email", None)  # Remove email from session
     flash("You have been logged out.", "success")
     return redirect(url_for("home"))

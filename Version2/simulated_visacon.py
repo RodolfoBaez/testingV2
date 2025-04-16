@@ -70,3 +70,12 @@ class SimulatedVisaCon:
         c = random.uniform(1.0, 10.0)  # Simulated capacitance
         g = random.uniform(0.1, 1.0)   # Simulated conductivity
         return c, g
+
+    def clear(self):
+        """
+        Simulates clearing the instrument's state.
+        """
+        if self.connected:
+            print("Simulated: Instrument cleared successfully.")
+        else:
+            print("Simulated: No instrument connected to clear.")

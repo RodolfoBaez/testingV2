@@ -118,6 +118,9 @@
                 <div class="d-flex">
                     <span class="navbar-text me-3">Welcome, {{ username }}</span>
                     <a class="btn btn-outline-primary" href="/logout" role="button">Logout</a>
+                    <form action="{{ url_for('reset_connection') }}" method="POST" class="d-flex">
+                        <button type="submit" class="btn btn-warning">Reset Connection</button>
+                    </form>
                 </div>
             </div>
         </div>

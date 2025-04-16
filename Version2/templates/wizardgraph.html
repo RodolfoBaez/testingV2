@@ -9,22 +9,16 @@
 
     <!-- Table Section -->
     <div id="table" class="mt-4" style="max-width: 800px; width: 100%; overflow-x: auto;"></div>
-
-    <!-- Buttons -->
-    <div class="mt-4">
-        <button id="saveGraphButton" class="btn btn-primary">Save Graph as PNG</button>
-        <button id="saveCSVButton" class="btn btn-secondary">Save Plot Points as CSV</button>
-    </div>
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
-    // Retrieve graph settings from the server
-    const graphSettings = {{ graph_settings|tojson|safe }};
+    // Retrieve graph settings and data from the server
+    const graphSettings = JSON.parse('{{ graph_settings | tojson | safe }}');
 
-    // Generate sample data for the graph based on settings
-    const xValues = Array.from({ length: 50 }, (_, i) => i); // X-axis values
-    const yValues = xValues.map(x => Math.sin(x / 5) + Math.random() * 0.2); // Y-axis values
+    // Extract data for the graph
+    const xValues = graphSettings.data.map(point => point[0]); // X-axis values
+    const yValues = graphSettings.data.map(point => point[1]); // Y-axis values
 
     // Plot the graph
     const trace = {
@@ -43,8 +37,8 @@
             xanchor: 'center',
             yanchor: 'top'
         },
-        xaxis: { title: 'X-Axis' },
-        yaxis: { title: 'Y-Axis' },
+        xaxis: { title: graphSettings.x_axis },
+        yaxis: { title: graphSettings.y1_axis },
         margin: { t: 50, b: 50, l: 50, r: 50 },
         plot_bgcolor: '#f9f9f9'
     };
@@ -59,28 +53,5 @@
     }
     tableHtml += '</tbody></table>';
     tableContainer.innerHTML = tableHtml;
-
-    // Save graph as PNG
-    document.getElementById('saveGraphButton').addEventListener('click', function () {
-        Plotly.toImage('plot', { format: 'png', width: 800, height: 400 })
-            .then(function (dataUrl) {
-                const link = document.createElement('a');
-                link.href = dataUrl;
-                link.download = 'graph.png';
-                link.click();
-            });
-    });
-
-    // Save plot points as CSV
-    document.getElementById('saveCSVButton').addEventListener('click', function () {
-        const csvContent = 'data:text/csv;charset=utf-8,' +
-            'X,Y\n' +
-            xValues.map((x, i) => `${x},${yValues[i].toFixed(2)}`).join('\n');
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement('a');
-        link.href = encodedUri;
-        link.download = 'plot_points.csv';
-        link.click();
-    });
 </script>
 {% endblock %}
