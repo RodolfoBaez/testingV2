@@ -92,6 +92,8 @@ def home():
 def contributions():
     return render_template("contributions.html")
 
+# MEASUREMENT PAGES #######################################################################################################################################
+
 @app.route('/measurement', methods=["GET", "POST"])
 def measurement():
     # Check if the user is logged in
@@ -191,50 +193,97 @@ def wizard():
         ctrl = get_controller()
 
         if request.method == "POST":
-            measurement_type = request.form.get("measurement_type")
-            bias_mode = request.form.get("bias_mode")  # Retrieve the bias mode from the form
-            graph_type = request.form.get("graph_type")
-            x_axis = request.form.get("x_axis")
-            y1_axis = request.form.get("y1_axis")
-            y2_axis = request.form.get("y2_axis") if graph_type == "cgv" else None
-
-            # Perform measurement and save data
-            data = None
-            if measurement_type == "cv":
-                if bias_mode == "pulsed":
-                    # Configure pulse-specific settings
-                    pulse_width = float(request.form.get("pulse_width", 0.1))  # Default to 0.1 if not provided
-                    pulse_amplitude = float(request.form.get("pulse_amplitude", 5.0))  # Default to 5.0 if not provided
-                    ctrl.set_Pulse(pulse_amplitude)  # Set pulse amplitude
-                    ctrl.set_Measure_pulse(pulse_width)  # Set pulse width
-
-                    # Perform pulse sweep measurement
-                    ctrl.pulse_sweep()
-                    data = ctrl.read_data()
+            action = request.form.get("action")
+            if action == "set_mode":
+                # Set the machine mode based on user selection
+                mode = request.form.get("mode")
+                if mode == "ct":
+                    ctrl.set_ctfunc()  # Set to C-T mode
+                    flash("Machine set to C-T mode successfully!", "success")
+                elif mode == "cgt":
+                    ctrl.set_cgtfunc()  # Set to C-G-T mode
+                    flash("Machine set to C-G-T mode successfully!", "success")
                 else:
-                    # Default CV measurement
-                    ctrl.single_config()
-                    ctrl.init_sweep()
-                    data = ctrl.read_data()
-            elif measurement_type == "ct":
-                ctrl.set_ctfunc()  # Set the instrument to C-T mode
-                ctrl.default_CT()  # Configure default C-T parameters
-                ctrl.init_sweep()
-                data = ctrl.read_data()
-            elif measurement_type == "cgt":
-                ctrl.set_cgtfunc()  # Set the instrument to C-G-T mode
-                ctrl.default_CT()  # Configure default C-G-T parameters
-                ctrl.init_sweep()
-                data = ctrl.read_data()
-
-            if data:
-                # Save the data to a CSV file using the mkcsv function
-                timestamp = time.strftime("%Y%m%d-%H%M%S")
-                filename = f"wizard_measurement_{timestamp}.csv"
-                ctrl.mkcsv(data, filename)
-                flash(f"Measurement completed successfully. Data saved to {filename}.", "success")
-            else:
-                flash("No data received during measurement. Please try again.", "error")
+                    flash("Invalid mode selected.", "error")
+            elif action == "set_connection_mode":
+                # Set the connection mode based on user selection
+                connection_mode = request.form.get("connection_mode")
+                if connection_mode == "float":
+                    ctrl.set_float()  # Set to Float mode
+                    flash("Connection set to Float mode successfully!", "success")
+                elif connection_mode == "ground":
+                    ctrl.set_ground()  # Set to Ground mode
+                    flash("Connection set to Ground mode successfully!", "success")
+                else:
+                    flash("Invalid connection mode selected.", "error")
+            elif action == "set_cable_length":
+                # Set the cable length based on user selection
+                cable_length = request.form.get("cable_length")
+                if cable_length == "1":
+                    ctrl.set_cable_1()  # Set to 0 meters
+                    flash("Cable length set to 0 meters successfully!", "success")
+                elif cable_length == "2":
+                    ctrl.set_cable_2()  # Set to 1 meter
+                    flash("Cable length set to 1 meter successfully!", "success")
+                else:
+                    flash("Invalid cable length selected.", "error")
+            elif action == "set_function":
+                # Set the function based on user selection
+                function = request.form.get("function")
+                if function == "cg":
+                    ctrl.set_cg()  # Set to C-G function
+                    flash("Function set to C-G successfully!", "success")
+                elif function == "c":
+                    ctrl.set_c()  # Set to C function
+                    flash("Function set to C successfully!", "success")
+                elif function == "g":
+                    ctrl.set_g()  # Set to G function
+                    flash("Function set to G successfully!", "success")
+                else:
+                    flash("Invalid function selected.", "error")
+            elif action == "set_meas_speed":
+                # Set the measurement speed based on user selection
+                meas_speed = request.form.get("meas_speed")
+                if meas_speed == "fast":
+                    ctrl.set_fast()  # Set to Fast speed
+                    flash("Measurement speed set to Fast successfully!", "success")
+                elif meas_speed == "medium":
+                    ctrl.set_medium()  # Set to Medium speed
+                    flash("Measurement speed set to Medium successfully!", "success")
+                elif meas_speed == "slow":
+                    ctrl.set_slow()  # Set to Slow speed
+                    flash("Measurement speed set to Slow successfully!", "success")
+                else:
+                    flash("Invalid measurement speed selected.", "error")
+            elif action == "set_sweep":
+                sweep_mode = request.form.get("sweep_mode")
+                if sweep_mode == "int":
+                    ctrl.set_int()
+                    flash("Sweep mode set to Repeat successfully!", "success")
+                elif sweep_mode == "ext":
+                    ctrl.set_ext()
+                    flash("Sweep mode set to External successfully!", "success")
+                elif sweep_mode == "hold":
+                    ctrl.set_hold()
+                    flash("Sweep mode set to Single successfully!", "success")
+                else:
+                    flash("Invalid sweep mode selected.", "error")
+            elif action == "set_meas_range":
+                meas_range = request.form.get("meas_range")
+                if meas_range == "auto":
+                    ctrl.set_auto()
+                    flash("Measurement range set to Auto successfully!", "success")
+                elif meas_range == "manual1":
+                    ctrl.set_10nf()
+                    flash("Measurement range set to 10nF/10mS successfully!", "success")
+                elif meas_range == "manual2":
+                    ctrl.set_100pf()
+                    flash("Measurement range set to 100pF/1mS successfully!", "success")
+                elif meas_range == "manual3":
+                    ctrl.set_10pf()
+                    flash("Measurement range set to 1pF/100uS successfully!", "success")
+                else:
+                    flash("Invalid measurement range selected.", "error")
 
         return render_template("wizard.html", connection_type="Real Connection", settings=session["settings"])
     except Exception as e:
