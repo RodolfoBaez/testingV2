@@ -140,5 +140,28 @@
         <!-- Submit Button -->
         <button type="submit" class="btn btn-dark mt-3">Set Sweep Mode</button>
     </form>
+
+    <hr class="my-5">
+
+    <!-- Form to Set BIAS Mode -->
+     <form method="POST">
+        <input type="hidden" name="action" value="set_bias">
+        
+        <!-- Bias Mode Selection -->
+         <div class="form-group">
+            <label for="bias_mode">Select Bias Mode:</label>
+            <select name="bias_mode" id="bias_mode" class="form-control" required>
+                <option value="dc">DC</option>
+                <option value="single">Single</option>
+                <option value="double">Double</option>
+                <option value="pulse">Pulsed</option>
+            </select>
+         </div>
+
+         <!-- Submit Button -->
+         <button type="submit" class="btn btn-dark mt-3">Set Bias Mode</button>
+     </form>
+
+     <hr class="my-5">
 </div>
 {% endblock %}
