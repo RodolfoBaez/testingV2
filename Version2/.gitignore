@@ -4,3 +4,6 @@ visacon.py
 testscript.py
 /uploads/
 /../myenv/
+/build/
+/dist/
+EasyCV.spec

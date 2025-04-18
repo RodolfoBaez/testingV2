@@ -6,6 +6,7 @@ from simulated_visacon import SimulatedVisaCon
 import sqlite3
 import csv
 import time
+import webview
 
 # Define the path to the database file
 DB_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
@@ -478,4 +479,9 @@ def logout():
     return redirect(url_for("home"))
 
 if __name__ == '__main__':
-    app.run(debug=True, host="0.0.0.0", port=5001)
+    # Create a WebView window
+    webview.create_window('HP 4280A Controller', app)  # Pass the Flask app to the WebView window
+    webview.start()
+
+    # Start the Flask app via web browser
+    ##app.run(debug=True, host="0.0.0.0", port=5001)
