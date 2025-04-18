@@ -192,6 +192,7 @@ def wizard():
         # Get the controller instance
         ctrl = get_controller()
 
+    # C-V Measurement #################################################################################################################
         if request.method == "POST":
             action = request.form.get("action")
             if action == "set_mode":
@@ -230,15 +231,24 @@ def wizard():
             elif action == "set_function":
                 # Set the function based on user selection
                 function = request.form.get("function")
-                if function == "cg":
-                    ctrl.set_cg()  # Set to C-G function
+                if function == "cg": # Unique to C-V Measurement
+                    ctrl.set_cg()  
                     flash("Function set to C-G successfully!", "success")
-                elif function == "c":
-                    ctrl.set_c()  # Set to C function
+                elif function == "c": # Unique to C-V Measurement
+                    ctrl.set_c()  
                     flash("Function set to C successfully!", "success")
-                elif function == "g":
-                    ctrl.set_g()  # Set to G function
+                elif function == "g": # Unique to C-V Measurement
+                    ctrl.set_g() 
                     flash("Function set to G successfully!", "success")
+                elif function == "cgt": # Unique to C-T Measurement
+                    ctrl.set_cgtfunc()
+                    flash("Function set to C-G-T successfully!", "success")
+                elif function == "ct": # Unique to C-T Measurement
+                    ctrl.set_ctfunc()
+                    flash("Function set to C-T successfully!", "success")
+                elif function == "gt": # Unique to C-T Measurement
+                    ctrl.set_gtfunc()
+                    flash("Function set to G-T successfully!", "success")
                 else:
                     flash("Invalid function selected.", "error")
             elif action == "set_meas_speed":
@@ -255,19 +265,6 @@ def wizard():
                     flash("Measurement speed set to Slow successfully!", "success")
                 else:
                     flash("Invalid measurement speed selected.", "error")
-            elif action == "set_sweep":
-                sweep_mode = request.form.get("sweep_mode")
-                if sweep_mode == "int":
-                    ctrl.set_int()
-                    flash("Sweep mode set to Repeat successfully!", "success")
-                elif sweep_mode == "ext":
-                    ctrl.set_ext()
-                    flash("Sweep mode set to External successfully!", "success")
-                elif sweep_mode == "hold":
-                    ctrl.set_hold()
-                    flash("Sweep mode set to Single successfully!", "success")
-                else:
-                    flash("Invalid sweep mode selected.", "error")
             elif action == "set_meas_range":
                 meas_range = request.form.get("meas_range")
                 if meas_range == "auto":
@@ -284,6 +281,27 @@ def wizard():
                     flash("Measurement range set to 1pF/100uS successfully!", "success")
                 else:
                     flash("Invalid measurement range selected.", "error")
+            elif action == "set_sweep":
+                sweep_mode = request.form.get("sweep_mode")
+                if sweep_mode == "int":
+                    ctrl.set_int() # Internal pulse mode
+                    flash("Sweep mode set to Repeat successfully!", "success")
+                elif sweep_mode == "ext":
+                    ctrl.set_ext() # External pulse mode
+                    flash("Sweep mode set to External successfully!", "success")
+                elif sweep_mode == "hold":
+                    ctrl.set_hold() # Single pulse mode
+                    flash("Sweep mode set to Single successfully!", "success")
+                else:
+                    flash("Invalid sweep mode selected.", "error")
+            elif action == "set_sig_level":
+                sig_level = request.form.get("sig_level")
+                if sig_level == "30":
+                    ctrl.set_signal_30()
+                    flash("Signal level set to 30V successfully!", "success")
+                elif sig_level == "10":
+                    ctrl.set_signal_10()
+                    flash("Signal level set to 10V successfully!", "success")
 
         return render_template("wizard.html", connection_type="Real Connection", settings=session["settings"])
     except Exception as e:

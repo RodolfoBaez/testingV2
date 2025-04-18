@@ -163,5 +163,190 @@
      </form>
 
      <hr class="my-5">
+     <p>Bias parameters WOULD go here but... Vincent wants this linked to the account</p>
+     <hr class="my-5">
+
+        <!-- Form to Set Bias Level -->
+        <form method="POST">
+            <input type="hidden" name="action" value="set_bias_level">
+    
+            <!-- Bias Level Selection -->
+            <div class="form-group">
+                <label for="bias_level">Select Bias Level (V):</label>
+                <select name="bias_level" id="bias_level" class="form-control" required>
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                </select>
+            </div>
+    
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-dark mt-3">Set Bias Level</button>
+        </form>
+
+     <!-- Form to set SIG Level -->
+        <form method="POST">
+            <input type="hidden" name="action" value="set_sig_level">
+    
+            <!-- SIG Level Selection -->
+            <div class="form-group">
+                <label for="sig_level">Select SIG Level (mV):</label>
+                <select name="sig_level" id="sig_level" class="form-control" required>
+                    <option value="30">30</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+    
+            <!-- Submit Button -->
+            <button type="submit" class="btn btn-dark mt-3">Set SIG Level</button>
+        </form>
+    
+     <hr class="my-5"> <!-- START OF CT MEASUREMENT FORM ---------------------------------------------------------------------->
+        <p>Everything below here would belong to the C-T measurement setup</p>
+     <hr class="my-5">
+
+     <!-- Form to Set Connection Mode -->
+    <form method="POST">
+        <input type="hidden" name="action" value="set_connection_mode">
+
+        <!-- Connection Mode Selection -->
+        <div class="form-group">
+            <label for="connection_mode">Select Connection Mode:</label>
+            <select name="connection_mode" id="connection_mode" class="form-control" required>
+                <option value="float">Float</option>
+                <option value="ground">Ground</option>
+            </select>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-secondary mt-3">Set Connection Mode</button>
+    </form>
+
+    <hr class="my-5">
+
+    <!-- Form to Set Cable Length -->
+    <form method="POST">
+        <input type="hidden" name="action" value="set_cable_length">
+
+        <!-- Cable Length Selection -->
+        <div class="form-group">
+            <label for="cable_length">Select Cable Length (meters):</label>
+            <select name="cable_length" id="cable_length" class="form-control" required>
+                <option value="1">0 meters</option>
+                <option value="2">1 meter</option>
+            </select>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-success mt-3">Set Cable Length</button>
+    </form>
+
+    <hr class="my-5">
+
+    <!-- Form to Set Function -->
+    <form method="POST">
+        <input type="hidden" name="action" value="set_function">
+
+        <!-- Function Selection -->
+        <div class="form-group">
+            <label for="function">Select Function:</label>
+            <select name="function" id="function" class="form-control" required>
+                <option value="cgt" selected>C-G-t</option>
+                <option value="ct">C-t</option>
+                <option value="gt">G-t</option>
+            </select>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-warning mt-3">Set Function</button>
+    </form>
+
+    <hr class="my-5">
+    
+    <!-- Form to Set Measurement Speed -->
+    <form method="POST">
+        <input type="hidden" name="action" value="set_meas_speed">
+
+        <!-- Measurement Speed Selection -->
+        <div class="form-group">
+            <label for="meas_speed">Select Measurement Speed:</label>
+            <select name="meas_speed" id="meas_speed" class="form-control" required>
+                <option value="fast">Fast</option>
+                <option value="medium" selected>Medium</option>
+                <option value="slow">Slow</option>
+            </select>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-info mt-3">Set Measurement Speed</button>
+    </form>
+
+    <hr class="my-5">
+
+    <!-- Form to Set Measurement Range -->
+    <form method="POST">
+        <input type="hidden" name="action" value="set_meas_range">
+
+        <!-- Measurement Range Selection -->
+        <div class="form-group">
+            <label for="meas_range">Select Measurement Range:</label>
+            <select name="meas_range" id="meas_range" class="form-control" required>
+                <option value="auto">Auto</option>
+                <option value="manual1">10nF/10mS</option>
+                <option value="manual2">100pF/1mS</option>
+                <option value="manual3">1pF/100uS</option>
+            </select>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-danger mt-3">Set Measurement Range</button>
+
+    </form>
+
+    <hr class="my-5">
+
+    <!-- Form to Set Sweep Mode -->
+    <form method="POST">
+        <input type="hidden" name="action" value="set_sweep">
+
+        <!-- Sweep Mode Selection -->
+        <div class="form-group">
+            <label for="sweep_mode">Select Sweep Mode:</label>
+            <select name="sweep_mode" id="sweep_mode" class="form-control" required>
+                <option value="hold">Single</option>
+                <option value="int">Repeat</option>
+                <option value="ext">EXT</option>
+            </select>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-dark mt-3">Set Sweep Mode</button>
+    </form>
+
+    <hr class="my-5">
+        <p>Operational Parameter Stuff</p>
+    <hr class="my-5">
+
+    <!-- Form to set SIG Level -->
+    <form method="POST">
+        <input type="hidden" name="action" value="set_sig_level">
+
+        <!-- SIG Level Selection -->
+        <div class="form-group">
+            <label for="sig_level">Select SIG Level (mV):</label>
+            <select name="sig_level" id="sig_level" class="form-control" required>
+                <option value="30">30</option>
+                <option value="10">10</option>
+            </select>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-dark mt-3">Set SIG Level</button>
+    </form>
+
+ <hr class="my-5">
+
+
 </div>
 {% endblock %}

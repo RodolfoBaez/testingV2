@@ -331,6 +331,10 @@ class controller:
         else:
             print("No connection to instrument.")
 
+    def set_gtfunc(self):
+        if self.conn.inst is not None:
+            self.command("FN6")
+
     #Functions to set MEAS Range
     def set_auto(self):
         if self.conn.inst is not None:
