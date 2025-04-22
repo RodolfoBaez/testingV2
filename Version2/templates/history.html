@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Measurement History{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Measurement History</h2>
+    {% if measurements %}
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>User</th>
+                    <th>Test Type</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for measurement in measurements %}
+                    <tr>
+                        <td>{{ measurement[0] }}</td> <!-- Measurement ID -->
+                        <td>{{ measurement[1] }}</td> <!-- Date -->
+                        <td>{{ measurement[2] }}</td> <!-- Time -->
+                        <td>{{ measurement[3] }}</td> <!-- Full Name -->
+                        <td>{{ measurement[4] }}</td> <!-- Test Type -->
+                        <td>
+                            <a href="{{ url_for('view_measurement', measurement_id=measurement[0]) }}" class="btn btn-primary btn-sm">View Graph</a>
+                            <form action="{{ url_for('delete_measurement', measurement_id=measurement[0]) }}" method="POST" style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this measurement?');">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No measurements found.</p>
+    {% endif %}
+</div>
+{% endblock %}

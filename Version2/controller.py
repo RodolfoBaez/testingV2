@@ -416,18 +416,23 @@ class controller:
             self.command("READ?")
             response = self.ReadBlockResponseAscii()
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            uploads_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+            os.makedirs(uploads_folder, exist_ok=True)  # Ensure the uploads folder exists
             filename = f"data_{timestamp}.csv"
+            file_path = os.path.join(uploads_folder, filename)
             if response is not None:
                 print("Data Received: ", response)
-                self.mkcsv(response, filename)
+                self.mkcsv(response, filename, uploads_folder)
                 self.command("SW0")
                 self.conn.inst.timeout = 10000
                 print("Sweep Stopped")
+                return file_path  # Return the file path
             else:
                 print("No data received")
+                return None
         else:
             print("No connection to instrument.")
-    ###
+            return None
     
     """
     def pulse_sweep(self, num, stopv):
@@ -641,5 +646,5 @@ class controller:
             writer = csv.writer(file)
             writer.writerows(formatted_data)  # Write properly formatted rows
         print("Data saved to CSV")
-        
+
 

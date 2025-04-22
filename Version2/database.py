@@ -27,6 +27,7 @@ def init_db():
             time_recorded TIME NOT NULL,
             user_id INTEGER NOT NULL,
             test_type TEXT NOT NULL,
+            csv_file_path TEXT,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
@@ -86,7 +87,7 @@ def delete_user_by_id(user_id):
     conn.close()
 
 
-def add_measurement(user_id, test_type):
+def add_measurement(user_id, test_type, csv_file_path):
     """Add a new measurement to the database."""
     conn = sqlite3.connect(DB_path)
     cursor = conn.cursor()
@@ -97,9 +98,9 @@ def add_measurement(user_id, test_type):
     time_recorded = current_datetime.time().strftime('%H:%M:%S')  # Convert time to string
 
     cursor.execute('''
-        INSERT INTO measurements (date_recorded, time_recorded, user_id, test_type)
-        VALUES (?, ?, ?, ?)
-    ''', (date_recorded, time_recorded, user_id, test_type))
+        INSERT INTO measurements (date_recorded, time_recorded, user_id, test_type, csv_file_path)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (date_recorded, time_recorded, user_id, test_type, csv_file_path))
 
     conn.commit()
     conn.close()

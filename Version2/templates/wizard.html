@@ -345,8 +345,13 @@
         <button type="submit" class="btn btn-dark mt-3">Set SIG Level</button>
     </form>
 
- <hr class="my-5">
+    <hr class="my-5">
 
+    <!-- Form to Start Measurement -->
+    <form method="POST">
+        <input type="hidden" name="action" value="start_measurement">
+        <button type="submit" class="btn btn-primary btn-lg">Start Measurement</button>
+    </form>
 
 </div>
 {% endblock %}

@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from controller import controller
-from database import init_db, add_user, get_user_by_id, get_user_by_email, add_measurement
+from database import init_db, add_user, get_user_by_id, get_user_by_email, add_measurement, get_measurements
 from simulated_visacon import SimulatedVisaCon
 import sqlite3
 import csv
@@ -136,7 +136,7 @@ def measurement():
                 # Perform measurement and save to CSV
                 if measurement_type == "cv":
                     ctrl.single_config()
-                    ctrl.init_sweep()
+                    ctrl.sweep_measure()
                     data = ctrl.read_data()
                     if data:
                         ctrl.mkcsv(data)
@@ -193,116 +193,133 @@ def wizard():
         # Get the controller instance
         ctrl = get_controller()
 
-    # C-V Measurement #################################################################################################################
         if request.method == "POST":
             action = request.form.get("action")
-            if action == "set_mode":
-                # Set the machine mode based on user selection
-                mode = request.form.get("mode")
-                if mode == "ct":
-                    ctrl.set_ctfunc()  # Set to C-T mode
-                    flash("Machine set to C-T mode successfully!", "success")
-                elif mode == "cgt":
-                    ctrl.set_cgtfunc()  # Set to C-G-T mode
-                    flash("Machine set to C-G-T mode successfully!", "success")
-                else:
-                    flash("Invalid mode selected.", "error")
-            elif action == "set_connection_mode":
-                # Set the connection mode based on user selection
-                connection_mode = request.form.get("connection_mode")
-                if connection_mode == "float":
-                    ctrl.set_float()  # Set to Float mode
-                    flash("Connection set to Float mode successfully!", "success")
-                elif connection_mode == "ground":
-                    ctrl.set_ground()  # Set to Ground mode
-                    flash("Connection set to Ground mode successfully!", "success")
-                else:
-                    flash("Invalid connection mode selected.", "error")
-            elif action == "set_cable_length":
-                # Set the cable length based on user selection
-                cable_length = request.form.get("cable_length")
-                if cable_length == "1":
-                    ctrl.set_cable_1()  # Set to 0 meters
-                    flash("Cable length set to 0 meters successfully!", "success")
-                elif cable_length == "2":
-                    ctrl.set_cable_2()  # Set to 1 meter
-                    flash("Cable length set to 1 meter successfully!", "success")
-                else:
-                    flash("Invalid cable length selected.", "error")
-            elif action == "set_function":
-                # Set the function based on user selection
-                function = request.form.get("function")
-                if function == "cg": # Unique to C-V Measurement
-                    ctrl.set_cg()  
-                    flash("Function set to C-G successfully!", "success")
-                elif function == "c": # Unique to C-V Measurement
-                    ctrl.set_c()  
-                    flash("Function set to C successfully!", "success")
-                elif function == "g": # Unique to C-V Measurement
-                    ctrl.set_g() 
-                    flash("Function set to G successfully!", "success")
-                elif function == "cgt": # Unique to C-T Measurement
-                    ctrl.set_cgtfunc()
-                    flash("Function set to C-G-T successfully!", "success")
-                elif function == "ct": # Unique to C-T Measurement
-                    ctrl.set_ctfunc()
-                    flash("Function set to C-T successfully!", "success")
-                elif function == "gt": # Unique to C-T Measurement
-                    ctrl.set_gtfunc()
-                    flash("Function set to G-T successfully!", "success")
-                else:
-                    flash("Invalid function selected.", "error")
-            elif action == "set_meas_speed":
-                # Set the measurement speed based on user selection
-                meas_speed = request.form.get("meas_speed")
-                if meas_speed == "fast":
-                    ctrl.set_fast()  # Set to Fast speed
-                    flash("Measurement speed set to Fast successfully!", "success")
-                elif meas_speed == "medium":
-                    ctrl.set_medium()  # Set to Medium speed
-                    flash("Measurement speed set to Medium successfully!", "success")
-                elif meas_speed == "slow":
-                    ctrl.set_slow()  # Set to Slow speed
-                    flash("Measurement speed set to Slow successfully!", "success")
-                else:
-                    flash("Invalid measurement speed selected.", "error")
-            elif action == "set_meas_range":
-                meas_range = request.form.get("meas_range")
-                if meas_range == "auto":
-                    ctrl.set_auto()
-                    flash("Measurement range set to Auto successfully!", "success")
-                elif meas_range == "manual1":
-                    ctrl.set_10nf()
-                    flash("Measurement range set to 10nF/10mS successfully!", "success")
-                elif meas_range == "manual2":
-                    ctrl.set_100pf()
-                    flash("Measurement range set to 100pF/1mS successfully!", "success")
-                elif meas_range == "manual3":
-                    ctrl.set_10pf()
-                    flash("Measurement range set to 1pF/100uS successfully!", "success")
-                else:
-                    flash("Invalid measurement range selected.", "error")
-            elif action == "set_sweep":
-                sweep_mode = request.form.get("sweep_mode")
-                if sweep_mode == "int":
-                    ctrl.set_int() # Internal pulse mode
-                    flash("Sweep mode set to Repeat successfully!", "success")
-                elif sweep_mode == "ext":
-                    ctrl.set_ext() # External pulse mode
-                    flash("Sweep mode set to External successfully!", "success")
-                elif sweep_mode == "hold":
-                    ctrl.set_hold() # Single pulse mode
-                    flash("Sweep mode set to Single successfully!", "success")
-                else:
-                    flash("Invalid sweep mode selected.", "error")
-            elif action == "set_sig_level":
-                sig_level = request.form.get("sig_level")
-                if sig_level == "30":
-                    ctrl.set_signal_30()
-                    flash("Signal level set to 30V successfully!", "success")
-                elif sig_level == "10":
-                    ctrl.set_signal_10()
-                    flash("Signal level set to 10V successfully!", "success")
+            match action:
+                case "start_measurement":
+                    # Start the measurement using the sweep_measure function
+                    csv_file_path = ctrl.sweep_measure()
+                    if csv_file_path:
+                        # Add the measurement to the database
+                        user = get_user_by_email(session['email'])
+                        add_measurement(user_id=user[0], test_type="Sweep", csv_file_path=csv_file_path)
+                        flash("Measurement started successfully! Data saved to CSV.", "success")
+                    else:
+                        flash("Measurement failed. No data received.", "error")
+                case "set_mode":
+                    mode = request.form.get("mode")
+                    match mode:
+                        case "ct":
+                            ctrl.set_ctfunc()
+                            flash("Machine set to C-T mode successfully!", "success")
+                        case "cgt":
+                            ctrl.set_cgtfunc()
+                            flash("Machine set to C-G-T mode successfully!", "success")
+                        case _:
+                            flash("Invalid mode selected.", "error")
+                case "set_connection_mode":
+                    connection_mode = request.form.get("connection_mode")
+                    match connection_mode:
+                        case "float":
+                            ctrl.set_float()
+                            flash("Connection set to Float mode successfully!", "success")
+                        case "ground":
+                            ctrl.set_ground()
+                            flash("Connection set to Ground mode successfully!", "success")
+                        case _:
+                            flash("Invalid connection mode selected.", "error")
+                case "set_cable_length":
+                    cable_length = request.form.get("cable_length")
+                    match cable_length:
+                        case "1":
+                            ctrl.set_cable_1()
+                            flash("Cable length set to 0 meters successfully!", "success")
+                        case "2":
+                            ctrl.set_cable_2()
+                            flash("Cable length set to 1 meter successfully!", "success")
+                        case _:
+                            flash("Invalid cable length selected.", "error")
+                case "set_function":
+                    function = request.form.get("function")
+                    match function:
+                        case "cg":
+                            ctrl.set_cg()
+                            flash("Function set to C-G successfully!", "success")
+                        case "c":
+                            ctrl.set_c()
+                            flash("Function set to C successfully!", "success")
+                        case "g":
+                            ctrl.set_g()
+                            flash("Function set to G successfully!", "success")
+                        case "cgt":
+                            ctrl.set_cgtfunc()
+                            flash("Function set to C-G-T successfully!", "success")
+                        case "ct":
+                            ctrl.set_ctfunc()
+                            flash("Function set to C-T successfully!", "success")
+                        case "gt":
+                            ctrl.set_gtfunc()
+                            flash("Function set to G-T successfully!", "success")
+                        case _:
+                            flash("Invalid function selected.", "error")
+                case "set_meas_speed":
+                    meas_speed = request.form.get("meas_speed")
+                    match meas_speed:
+                        case "fast":
+                            ctrl.set_fast()
+                            flash("Measurement speed set to Fast successfully!", "success")
+                        case "medium":
+                            ctrl.set_medium()
+                            flash("Measurement speed set to Medium successfully!", "success")
+                        case "slow":
+                            ctrl.set_slow()
+                            flash("Measurement speed set to Slow successfully!", "success")
+                        case _:
+                            flash("Invalid measurement speed selected.", "error")
+                case "set_meas_range":
+                    meas_range = request.form.get("meas_range")
+                    match meas_range:
+                        case "auto":
+                            ctrl.set_auto()
+                            flash("Measurement range set to Auto successfully!", "success")
+                        case "manual1":
+                            ctrl.set_10nf()
+                            flash("Measurement range set to 10nF/10mS successfully!", "success")
+                        case "manual2":
+                            ctrl.set_100pf()
+                            flash("Measurement range set to 100pF/1mS successfully!", "success")
+                        case "manual3":
+                            ctrl.set_10pf()
+                            flash("Measurement range set to 1pF/100uS successfully!", "success")
+                        case _:
+                            flash("Invalid measurement range selected.", "error")
+                case "set_sweep":
+                    sweep_mode = request.form.get("sweep_mode")
+                    match sweep_mode:
+                        case "int":
+                            ctrl.set_int()
+                            flash("Sweep mode set to Repeat successfully!", "success")
+                        case "ext":
+                            ctrl.set_ext()
+                            flash("Sweep mode set to External successfully!", "success")
+                        case "hold":
+                            ctrl.set_hold()
+                            flash("Sweep mode set to Single successfully!", "success")
+                        case _:
+                            flash("Invalid sweep mode selected.", "error")
+                case "set_sig_level":
+                    sig_level = request.form.get("sig_level")
+                    match sig_level:
+                        case "30":
+                            ctrl.set_signal_30()
+                            flash("Signal level set to 30V successfully!", "success")
+                        case "10":
+                            ctrl.set_signal_10()
+                            flash("Signal level set to 10V successfully!", "success")
+                        case _:
+                            flash("Invalid signal level selected.", "error")
+                case _:
+                    flash("Invalid action selected.", "error")
 
         return render_template("wizard.html", connection_type="Real Connection", settings=session["settings"])
     except Exception as e:
@@ -421,6 +438,105 @@ def reset_connection():
 
     return redirect(request.referrer or url_for("home"))
 
+@app.route('/history', methods=["GET"])
+def history():
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Get the user information
+    user = get_user_by_email(session['email'])
+    if not user:
+        flash("User not found. Please log in again.", "error")
+        return redirect(url_for("login"))
+
+    # Fetch measurements for the logged-in user
+    measurements = get_measurements(user_id=user[0])  # user[0] is the user ID
+
+    return render_template("history.html", measurements=measurements)
+
+@app.route('/view_measurement/<int:measurement_id>', methods=["GET"])
+def view_measurement(measurement_id):
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Fetch the measurement data by ID
+    conn = sqlite3.connect(DB_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT measurement_id, date_recorded, time_recorded, user_id, test_type, csv_file_path
+        FROM measurements WHERE measurement_id = ?
+    ''', (measurement_id,))
+    measurement = cursor.fetchone()
+    conn.close()
+
+    if not measurement:
+        flash("Measurement not found.", "error")
+        return redirect(url_for("history"))
+
+    # Pass the measurement data and CSV file path to the wizard graph template
+    return render_template("wizardgraph.html", graph_settings={"measurement": measurement, "csv_file_path": measurement[5]})
+
+@app.route('/delete_measurement/<int:measurement_id>', methods=["POST"])
+def delete_measurement(measurement_id):
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Delete the measurement from the database
+    conn = sqlite3.connect(DB_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        DELETE FROM measurements WHERE measurement_id = ?
+    ''', (measurement_id,))
+    conn.commit()
+    conn.close()
+
+    flash("Measurement deleted successfully.", "success")
+    return redirect(url_for("history"))
+
+@app.route('/settings', methods=["GET", "POST"])
+def settings():
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Prevent the demo user from accessing the settings page
+    if session['email'] == "demo@example.com":
+        flash("Demo user cannot access the settings page.", "error")
+        return redirect(url_for("home"))
+
+    # Get the current user
+    user = get_user_by_email(session['email'])
+    if not user:
+        flash("User not found. Please log in again.", "error")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        new_email = request.form.get("email")
+        new_password = request.form.get("password")
+
+        # Update the user's email and/or password
+        conn = sqlite3.connect(DB_path)
+        cursor = conn.cursor()
+        if new_email:
+            cursor.execute("UPDATE users SET email = ? WHERE id = ?", (new_email, user[0]))
+            session['email'] = new_email  # Update session email
+        if new_password:
+            cursor.execute("UPDATE users SET password = ? WHERE id = ?", (new_password, user[0]))
+        conn.commit()
+        conn.close()
+
+        flash("Settings updated successfully!", "success")
+        return redirect(url_for("settings"))
+
+    return render_template("settings.html", user=user)
+
 # USER PAGES ################################################################################################################################################
 @app.route('/login', methods=["POST", "GET"])
 def login():
@@ -480,8 +596,8 @@ def logout():
 
 if __name__ == '__main__':
     # Create a WebView window
-    webview.create_window('HP 4280A Controller', app)  # Pass the Flask app to the WebView window
-    webview.start()
+    #webview.create_window('HP 4280A Controller', app)  # Pass the Flask app to the WebView window
+    #webview.start()
 
     # Start the Flask app via web browser
-    ##app.run(debug=True, host="0.0.0.0", port=5001)
+    app.run(debug=True, host="0.0.0.0", port=5001)
