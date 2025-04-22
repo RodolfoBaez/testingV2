@@ -7,6 +7,7 @@ import sqlite3
 import csv
 import time
 import webview
+import bcrypt
 
 # Define the path to the database file
 DB_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
@@ -82,6 +83,18 @@ def initialize_settings():
             "Hold_T": 0.05,
             "Step_T": 0.05
         }
+
+def add_user(first_name, last_name, email, password):
+    """Add a new user to the database."""
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())  # Hash and salt the password
+    conn = sqlite3.connect(DB_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO users (first_name, last_name, email, password)
+        VALUES (?, ?, ?, ?)
+    ''', (first_name, last_name, email, hashed_password))
+    conn.commit()
+    conn.close()
 
 # GENERAL PAGES ###############################################################################################################################################
 
@@ -518,8 +531,20 @@ def settings():
         return redirect(url_for("login"))
 
     if request.method == "POST":
+        current_password = request.form.get("current_password")
+        new_password = request.form.get("new_password")
+        confirm_password = request.form.get("confirm_password")
         new_email = request.form.get("email")
-        new_password = request.form.get("password")
+
+        # Validate current password
+        if not bcrypt.checkpw(current_password.encode('utf-8'), user[4]):  # Assuming user[4] is the hashed password
+            flash("Current password is incorrect.", "error")
+            return redirect(url_for("settings"))
+
+        # Validate new password and confirmation
+        if new_password and new_password != confirm_password:
+            flash("New password and confirmation do not match.", "error")
+            return redirect(url_for("settings"))
 
         # Update the user's email and/or password
         conn = sqlite3.connect(DB_path)
@@ -528,7 +553,8 @@ def settings():
             cursor.execute("UPDATE users SET email = ? WHERE id = ?", (new_email, user[0]))
             session['email'] = new_email  # Update session email
         if new_password:
-            cursor.execute("UPDATE users SET password = ? WHERE id = ?", (new_password, user[0]))
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())  # Hash and salt the new password
+            cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed_password, user[0]))
         conn.commit()
         conn.close()
 
@@ -546,8 +572,8 @@ def login():
         
         user = get_user_by_email(email)
         if user:
-            stored_password = user[4]  # Assuming user[4] is the password column
-            if stored_password == password:
+            stored_password = user[4]  # Assuming user[4] is the hashed password column
+            if bcrypt.checkpw(password.encode('utf-8'), stored_password):
                 session["email"] = email  # Store email in session
                 flash("Login successful!", "success")
                 return redirect(url_for("home"))
