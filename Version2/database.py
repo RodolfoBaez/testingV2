@@ -2,6 +2,7 @@ import sqlite3
 import csv
 import os
 from datetime import datetime
+import bcrypt
 
 # Define the path to the database file
 DB_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
@@ -136,3 +137,22 @@ def export_measurements_to_csv(filename="measurements.csv"):
         writer = csv.writer(csvfile)
         writer.writerow(['Measurement ID', 'Date', 'Time', 'Full Name', 'Test Type'])
         writer.writerows(measurements)
+
+def migrate_passwords():
+    conn = sqlite3.connect(DB_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, password FROM users")
+    users = cursor.fetchall()
+
+    for user_id, password in users:
+        try:
+            # Check if the password is already hashed
+            bcrypt.checkpw("test".encode('utf-8'), password)
+        except TypeError:
+            # If the password is plain text, hash it
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+            cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed_password, user_id))
+
+    conn.commit()
+    conn.close()
+    print("Password migration completed.")

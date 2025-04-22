@@ -380,14 +380,14 @@ def documentation():
         conn.commit()
         conn.close()
 
-    # Fetch all users from the database
+    # Fetch all users except the demo user
     conn = sqlite3.connect(DB_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT first_name, last_name, email, id, is_admin FROM users")
+    cursor.execute("SELECT first_name, last_name, email, id, is_admin FROM users WHERE email != 'demo@example.com'")
     users = cursor.fetchall()
     conn.close()
 
-    return render_template("documentation.html", users=users)
+    return render_template("documentation.html", users=users, logged_in_email=session['email'])
 
 @app.route('/pulse_graph')
 def pulsegraph():
@@ -572,14 +572,30 @@ def login():
         
         user = get_user_by_email(email)
         if user:
-            stored_password = user[4]  # Assuming user[4] is the hashed password column
-            if bcrypt.checkpw(password.encode('utf-8'), stored_password):
-                session["email"] = email  # Store email in session
-                flash("Login successful!", "success")
-                return redirect(url_for("home"))
-            else:
-                flash("Incorrect password. Please try again.", "error")
-                return redirect(url_for("home") + "?login=1")
+            stored_password = user[4]  # Assuming user[4] is the password column
+            try:
+                # Check if the stored password is hashed
+                if bcrypt.checkpw(password.encode('utf-8'), stored_password):
+                    session["email"] = email  # Store email in session
+                    flash("Login successful!", "success")
+                    return redirect(url_for("home"))
+            except TypeError:
+                # If the stored password is plain text, hash it and update the database
+                if password == stored_password:  # Plain-text password match
+                    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+                    conn = sqlite3.connect(DB_path)
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed_password, user[0]))
+                    conn.commit()
+                    conn.close()
+
+                    # Log the user in after updating the password
+                    session["email"] = email
+                    flash("Login successful! Your password has been secured.", "success")
+                    return redirect(url_for("home"))
+
+            flash("Incorrect password. Please try again.", "error")
+            return redirect(url_for("home") + "?login=1")
         else:
             flash("Email not found. Please register.", "error")
             return redirect(url_for("home") + "?login=1")

@@ -24,20 +24,24 @@
                 <td>{{ user[2] }}</td>
                 <td>{{ "Yes" if user[4] == 1 else "No" }}</td>
                 <td class="action-buttons">
-                    <form method="POST" action="{{ url_for('documentation') }}" style="display:inline;" onsubmit="return confirmDelete()">
-                        <input type="hidden" name="user_id" value="{{ user[3] }}">
-                        <button type="submit" name="action" value="delete" class="btn btn-outline-danger" >Delete</button>
-                    </form>
-                    {% if user[4] == 0 %}
-                    <form method="POST" action="{{ url_for('documentation') }}" style="display:inline;">
-                        <input type="hidden" name="user_id" value="{{ user[3] }}">
-                        <button type="submit" name="action" value="grant_admin" class="btn btn-outline-success btn-sm">Grant Admin</button>
-                    </form>
+                    {% if user[2] != logged_in_email %}
+                        <form method="POST" action="{{ url_for('documentation') }}" style="display:inline;" onsubmit="return confirmDelete()">
+                            <input type="hidden" name="user_id" value="{{ user[3] }}">
+                            <button type="submit" name="action" value="delete" class="btn btn-outline-danger">Delete</button>
+                        </form>
+                        {% if user[4] == 0 %}
+                        <form method="POST" action="{{ url_for('documentation') }}" style="display:inline;">
+                            <input type="hidden" name="user_id" value="{{ user[3] }}">
+                            <button type="submit" name="action" value="grant_admin" class="btn btn-outline-primary">Grant Admin</button>
+                        </form>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('documentation') }}" style="display:inline;">
+                            <input type="hidden" name="user_id" value="{{ user[3] }}">
+                            <button type="submit" name="action" value="revoke_admin" class="btn btn-outline-dark">Revoke Admin</button>
+                        </form>
+                        {% endif %}
                     {% else %}
-                    <form method="POST" action="{{ url_for('documentation') }}" style="display:inline;" onsubmit="return confirmRevokeAdmin()">
-                        <input type="hidden" name="user_id" value="{{ user[3] }}">
-                        <button type="submit" name="action" value="revoke_admin" class="btn btn-outline-dark btn-sm \">Revoke Admin</button>
-                    </form>
+                        <span class="text-muted">No actions available</span>
                     {% endif %}
                 </td>
             </tr>
@@ -49,9 +53,6 @@
 <script>
     function confirmDelete() {
         return confirm("Are you sure you want to delete this user?");
-    }
-    function confirmRevokeAdmin() {
-        return confirm("Are you sure you want to revoke admin access for this user?");
     }
 </script>
 
