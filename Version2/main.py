@@ -572,7 +572,7 @@ def login():
         
         user = get_user_by_email(email)
         if user:
-            stored_password = user[4]  # Assuming user[4] is the password column
+            stored_password = user[4]
             try:
                 # Check if the stored password is hashed
                 if bcrypt.checkpw(password.encode('utf-8'), stored_password):
