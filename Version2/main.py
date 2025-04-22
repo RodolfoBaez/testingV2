@@ -37,6 +37,23 @@ def inject_user_info():
 # Global Dictionary to store controller instances through session ID
 gpib_connections = {}
 
+# Status and terminal output for connection status
+@app.context_processor
+def inject_connection_status():
+    """Inject connection status into all templates"""
+    if 'email' in session and session['email'] in gpib_connections:
+        ctrl = gpib_connections[session['email']]
+        if hasattr(ctrl, 'conn') and hasattr(ctrl.conn, 'check_connection'):
+            connected = ctrl.conn.check_connection()
+            return {
+                'connection_status': 'success' if connected else 'failure',
+                'terminal_output': ["Connected to device." if connected else "Not connected."]
+            }
+    return {
+        'connection_status': 'failure',
+        'terminal_output': ["No connection."]
+    }
+
 def get_controller():
     """Retrieve or create a controller instance for the current session."""
     session_id = session.get('email')
@@ -83,6 +100,24 @@ def initialize_settings():
             "Hold_T": 0.05,
             "Step_T": 0.05
         }
+
+def check_connection_status():
+    """Check if the controller is connected to the GPIB device."""
+    if 'email' not in session:
+        return "failure", ["User not logged in."]
+    
+    session_id = session.get('email')
+    if session_id not in gpib_connections:
+        return "failure", ["No GPIB connection found for current session."]
+
+    ctrl = gpib_connections[session_id]
+    if hasattr(ctrl, 'conn') and hasattr(ctrl.conn, 'check_connection'):
+        connected = ctrl.conn.check_connection()
+        if connected:
+            return "success", ["Connection to device established."]
+        else:
+            return "failure", ["Failed to connect to device."]
+    return "failure", ["Controller or connection is invalid."]
 
 def add_user(first_name, last_name, email, password):
     """Add a new user to the database."""
@@ -177,7 +212,9 @@ def measurement():
                     ctrl.pulse_sweep()
                     flash("Pulse Sweep Measurement completed! Data saved successfully.", "success")
 
-        return render_template("measurement.html", connection_type="Real Connection", settings=session["settings"])
+        connection_status, terminal_output = check_connection_status()
+        return render_template("measurement.html", connection_status=connection_status, terminal_output=terminal_output, settings=session["settings"])
+
     except Exception as e:
         flash(f"Error: {str(e)}", "error")
         return redirect(url_for("home"))
@@ -573,12 +610,13 @@ def login():
         user = get_user_by_email(email)
         if user:
             stored_password = user[4]  # Assuming user[4] is the password column
+            logged_in = False
+            
             try:
                 # Check if the stored password is hashed
                 if bcrypt.checkpw(password.encode('utf-8'), stored_password):
                     session["email"] = email  # Store email in session
-                    flash("Login successful!", "success")
-                    return redirect(url_for("home"))
+                    logged_in = True
             except TypeError:
                 # If the stored password is plain text, hash it and update the database
                 if password == stored_password:  # Plain-text password match
@@ -588,14 +626,23 @@ def login():
                     cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed_password, user[0]))
                     conn.commit()
                     conn.close()
-
+                    
                     # Log the user in after updating the password
                     session["email"] = email
-                    flash("Login successful! Your password has been secured.", "success")
-                    return redirect(url_for("home"))
-
-            flash("Incorrect password. Please try again.", "error")
-            return redirect(url_for("home") + "?login=1")
+                    logged_in = True
+                    flash("Your password has been secured.", "info")
+            
+            if logged_in:
+                try:
+                    # Try to get or create controller to establish connection
+                    get_controller()
+                    flash("Login successful! Device connection established.", "success")
+                except Exception as e:
+                    flash(f"Login successful, but device connection failed: {str(e)}", "warning")
+                return redirect(url_for("home"))
+            else:
+                flash("Incorrect password. Please try again.", "error")
+                return redirect(url_for("home") + "?login=1")
         else:
             flash("Email not found. Please register.", "error")
             return redirect(url_for("home") + "?login=1")

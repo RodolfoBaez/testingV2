@@ -1,357 +1,310 @@
 {% extends "base.html" %}
 {% block title %}Measurement Wizard{% endblock %}
 {% block content %}
-<div class="container mt-5">
-    <h1 class="text-center">Measurement Wizard</h1>
-
-    <!-- Form to Set Measurement Mode -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_mode">
-
-        <!-- Mode Selection -->
-        <div class="form-group">
-            <label for="mode">Select Measurement Mode:</label>
-            <select name="mode" id="mode" class="form-control" required>
-                <option value="cgt">C-V Measurement</option>
-                <option value="ct">C-T Measurement</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-primary mt-3">Set Measurement Mode</button>
-    </form>
-
-    <hr class="my-5">
-
-    <!-- Form to Set Connection Mode -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_connection_mode">
-
-        <!-- Connection Mode Selection -->
-        <div class="form-group">
-            <label for="connection_mode">Select Connection Mode:</label>
-            <select name="connection_mode" id="connection_mode" class="form-control" required>
-                <option value="float">Float</option>
-                <option value="ground">Ground</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-secondary mt-3">Set Connection Mode</button>
-    </form>
-
-    <hr class="my-5">
-
-    <!-- Form to Set Cable Length -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_cable_length">
-
-        <!-- Cable Length Selection -->
-        <div class="form-group">
-            <label for="cable_length">Select Cable Length (meters):</label>
-            <select name="cable_length" id="cable_length" class="form-control" required>
-                <option value="1">0 meters</option>
-                <option value="2">1 meter</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-success mt-3">Set Cable Length</button>
-    </form>
-
-    <hr class="my-5">
-
-    <!-- Form to Set Function -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_function">
-
-        <!-- Function Selection -->
-        <div class="form-group">
-            <label for="function">Select Function:</label>
-            <select name="function" id="function" class="form-control" required>
-                <option value="cg" selected>C-G</option>
-                <option value="c">C</option>
-                <option value="g">G</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-warning mt-3">Set Function</button>
-    </form>
-
-    <hr class="my-5">
-    
-    <!-- Form to Set Measurement Speed -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_meas_speed">
-
-        <!-- Measurement Speed Selection -->
-        <div class="form-group">
-            <label for="meas_speed">Select Measurement Speed:</label>
-            <select name="meas_speed" id="meas_speed" class="form-control" required>
-                <option value="fast">Fast</option>
-                <option value="medium" selected>Medium</option>
-                <option value="slow">Slow</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-info mt-3">Set Measurement Speed</button>
-    </form>
-
-    <hr class="my-5">
-
-    <!-- Form to Set Measurement Range -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_meas_range">
-
-        <!-- Measurement Range Selection -->
-        <div class="form-group">
-            <label for="meas_range">Select Measurement Range:</label>
-            <select name="meas_range" id="meas_range" class="form-control" required>
-                <option value="auto">Auto</option>
-                <option value="manual1">10nF/10mS</option>
-                <option value="manual2">100pF/1mS</option>
-                <option value="manual3">1pF/100uS</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-danger mt-3">Set Measurement Range</button>
-
-    </form>
-
-    <hr class="my-5">
-
-    <!-- Form to Set Sweep Mode -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_sweep">
-
-        <!-- Sweep Mode Selection -->
-        <div class="form-group">
-            <label for="sweep_mode">Select Sweep Mode:</label>
-            <select name="sweep_mode" id="sweep_mode" class="form-control" required>
-                <option value="hold">Single</option>
-                <option value="int">Repeat</option>
-                <option value="ext">EXT</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-dark mt-3">Set Sweep Mode</button>
-    </form>
-
-    <hr class="my-5">
-
-    <!-- Form to Set BIAS Mode -->
-     <form method="POST">
-        <input type="hidden" name="action" value="set_bias">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Measurement Wizard</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mx-auto max-w-3xl p-6">
+        <h1 class="text-3xl font-light text-center text-gray-800 mb-8">Measurement Wizard</h1>
         
-        <!-- Bias Mode Selection -->
-         <div class="form-group">
-            <label for="bias_mode">Select Bias Mode:</label>
-            <select name="bias_mode" id="bias_mode" class="form-control" required>
-                <option value="dc">DC</option>
-                <option value="single">Single</option>
-                <option value="double">Double</option>
-                <option value="pulse">Pulsed</option>
-            </select>
-         </div>
+        <!-- Main Control Panel -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <!-- Primary Settings -->
+            <div class="mb-8">
+                <h2 class="text-xl font-medium text-gray-700 mb-4">Measurement Configuration</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <form method="POST" id="mode-form" class="measurement-form space-y-2">
+                        <input type="hidden" name="action" value="set_mode">
+                        <label for="mode" class="block text-sm text-gray-600">Measurement Mode</label>
+                        <div class="flex space-x-2">
+                            <select name="mode" id="mode" class="persist-select flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="autoApplyMode(this)">
+                                <option value="cgt">C-V Measurement</option>
+                                <option value="ct">C-T Measurement</option>
+                            </select>
+                        </div>
+                    </form>
 
-         <!-- Submit Button -->
-         <button type="submit" class="btn btn-dark mt-3">Set Bias Mode</button>
-     </form>
-
-     <hr class="my-5">
-     <p>Bias parameters WOULD go here but... Vincent wants this linked to the account</p>
-     <hr class="my-5">
-
-        <!-- Form to Set Bias Level -->
-        <form method="POST">
-            <input type="hidden" name="action" value="set_bias_level">
-    
-            <!-- Bias Level Selection -->
-            <div class="form-group">
-                <label for="bias_level">Select Bias Level (V):</label>
-                <select name="bias_level" id="bias_level" class="form-control" required>
-                    <option value="0">0</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                </select>
+                    <form method="POST" id="function-form" class="measurement-form space-y-2">
+                        <input type="hidden" name="action" value="set_function">
+                        <label for="function" class="block text-sm text-gray-600">Function</label>
+                        <div class="flex space-x-2">
+                            <select name="function" id="function" class="persist-select flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <!-- Options will be dynamically updated based on measurement mode -->
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">Apply</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-    
-            <!-- Submit Button -->
-            <button type="submit" class="btn btn-dark mt-3">Set Bias Level</button>
-        </form>
+            
+            <!-- Connection Settings -->
+            <div class="mb-8">
+                <h2 class="text-xl font-medium text-gray-700 mb-4">Connection Settings</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <form method="POST" class="measurement-form space-y-2">
+                        <input type="hidden" name="action" value="set_connection_mode">
+                        <label for="connection_mode" class="block text-sm text-gray-600">Connection Mode</label>
+                        <div class="flex space-x-2">
+                            <select name="connection_mode" id="connection_mode" class="persist-select flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="float">Float</option>
+                                <option value="ground">Ground</option>
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">Apply</button>
+                        </div>
+                    </form>
 
-     <!-- Form to set SIG Level -->
-        <form method="POST">
-            <input type="hidden" name="action" value="set_sig_level">
-    
-            <!-- SIG Level Selection -->
-            <div class="form-group">
-                <label for="sig_level">Select SIG Level (mV):</label>
-                <select name="sig_level" id="sig_level" class="form-control" required>
-                    <option value="30">30</option>
-                    <option value="10">10</option>
-                </select>
+                    <form method="POST" class="measurement-form space-y-2">
+                        <input type="hidden" name="action" value="set_cable_length">
+                        <label for="cable_length" class="block text-sm text-gray-600">Cable Length</label>
+                        <div class="flex space-x-2">
+                            <select name="cable_length" id="cable_length" class="persist-select flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="1">0 meters</option>
+                                <option value="2">1 meter</option>
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">Apply</button>
+                        </div>
+                    </form>
+                </div>
             </div>
+            
+            <!-- Measurement Settings -->
+            <div>
+                <h2 class="text-xl font-medium text-gray-700 mb-4">Measurement Parameters</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <form method="POST" class="measurement-form space-y-2">
+                        <input type="hidden" name="action" value="set_meas_speed">
+                        <label for="meas_speed" class="block text-sm text-gray-600">Measurement Speed</label>
+                        <div class="flex space-x-2">
+                            <select name="meas_speed" id="meas_speed" class="persist-select flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="fast">Fast</option>
+                                <option value="medium">Medium</option>
+                                <option value="slow">Slow</option>
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">Apply</button>
+                        </div>
+                    </form>
+
+                    <form method="POST" class="measurement-form space-y-2">
+                        <input type="hidden" name="action" value="set_meas_range">
+                        <label for="meas_range" class="block text-sm text-gray-600">Measurement Range</label>
+                        <div class="flex space-x-2">
+                            <select name="meas_range" id="meas_range" class="persist-select flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="auto">Auto</option>
+                                <option value="manual1">10nF/10mS</option>
+                                <option value="manual2">100pF/1mS</option>
+                                <option value="manual3">1pF/100uS</option>
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">Apply</button>
+                        </div>
+                    </form>
+                    
+                    <form method="POST" class="measurement-form space-y-2">
+                        <input type="hidden" name="action" value="set_sweep">
+                        <label for="sweep_mode" class="block text-sm text-gray-600">Sweep Mode</label>
+                        <div class="flex space-x-2">
+                            <select name="sweep_mode" id="sweep_mode" class="persist-select flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="hold">Single</option>
+                                <option value="int">Repeat</option>
+                                <option value="ext">EXT</option>
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">Apply</button>
+                        </div>
+                    </form>
+                    
+                    <form method="POST" class="measurement-form space-y-2">
+                        <input type="hidden" name="action" value="set_sig_level">
+                        <label for="sig_level" class="block text-sm text-gray-600">Signal Level (mV)</label>
+                        <div class="flex space-x-2">
+                            <select name="sig_level" id="sig_level" class="persist-select flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="30">30</option>
+                                <option value="10">10</option>
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">Apply</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bias Settings Panel - Only visible for C-V measurements -->
+        <div id="bias-settings-panel" class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-medium text-gray-700 mb-4">Bias Settings</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form method="POST" class="measurement-form space-y-2">
+                    <input type="hidden" name="action" value="set_bias">
+                    <label for="bias_mode" class="block text-sm text-gray-600">Bias Mode</label>
+                    <div class="flex space-x-2">
+                        <select name="bias_mode" id="bias_mode" class="persist-select flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="dc">DC</option>
+                            <option value="single">Single</option>
+                            <option value="double">Double</option>
+                            <option value="pulse">Pulsed</option>
+                        </select>
+                        <button type="submit" class="btn btn-outline-primary">Apply</button>
+                    </div>
+                </form>
+
+                <form method="POST" class="measurement-form space-y-2">
+                    <input type="hidden" name="action" value="set_bias_level">
+                    <label for="bias_level" class="block text-sm text-gray-600">Bias Level (V)</label>
+                    <div class="flex space-x-2">
+                        <select name="bias_level" id="bias_level" class="persist-select flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                        </select>
+                        <button type="submit" class="btn btn-outline-primary">Apply</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-500">
+                Additional bias parameters will be linked to account settings
+            </div>
+        </div>
+    </div>
     
-            <!-- Submit Button -->
-            <button type="submit" class="btn btn-dark mt-3">Set SIG Level</button>
-        </form>
-    
-     <hr class="my-5"> <!-- START OF CT MEASUREMENT FORM ---------------------------------------------------------------------->
-        <p>Everything below here would belong to the C-T measurement setup</p>
-     <hr class="my-5">
-
-     <!-- Form to Set Connection Mode -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_connection_mode">
-
-        <!-- Connection Mode Selection -->
-        <div class="form-group">
-            <label for="connection_mode">Select Connection Mode:</label>
-            <select name="connection_mode" id="connection_mode" class="form-control" required>
-                <option value="float">Float</option>
-                <option value="ground">Ground</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-secondary mt-3">Set Connection Mode</button>
-    </form>
-
-    <hr class="my-5">
-
-    <!-- Form to Set Cable Length -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_cable_length">
-
-        <!-- Cable Length Selection -->
-        <div class="form-group">
-            <label for="cable_length">Select Cable Length (meters):</label>
-            <select name="cable_length" id="cable_length" class="form-control" required>
-                <option value="1">0 meters</option>
-                <option value="2">1 meter</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-success mt-3">Set Cable Length</button>
-    </form>
-
-    <hr class="my-5">
-
-    <!-- Form to Set Function -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_function">
-
-        <!-- Function Selection -->
-        <div class="form-group">
-            <label for="function">Select Function:</label>
-            <select name="function" id="function" class="form-control" required>
-                <option value="cgt" selected>C-G-t</option>
-                <option value="ct">C-t</option>
-                <option value="gt">G-t</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-warning mt-3">Set Function</button>
-    </form>
-
-    <hr class="my-5">
-    
-    <!-- Form to Set Measurement Speed -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_meas_speed">
-
-        <!-- Measurement Speed Selection -->
-        <div class="form-group">
-            <label for="meas_speed">Select Measurement Speed:</label>
-            <select name="meas_speed" id="meas_speed" class="form-control" required>
-                <option value="fast">Fast</option>
-                <option value="medium" selected>Medium</option>
-                <option value="slow">Slow</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-info mt-3">Set Measurement Speed</button>
-    </form>
-
-    <hr class="my-5">
-
-    <!-- Form to Set Measurement Range -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_meas_range">
-
-        <!-- Measurement Range Selection -->
-        <div class="form-group">
-            <label for="meas_range">Select Measurement Range:</label>
-            <select name="meas_range" id="meas_range" class="form-control" required>
-                <option value="auto">Auto</option>
-                <option value="manual1">10nF/10mS</option>
-                <option value="manual2">100pF/1mS</option>
-                <option value="manual3">1pF/100uS</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-danger mt-3">Set Measurement Range</button>
-
-    </form>
-
-    <hr class="my-5">
-
-    <!-- Form to Set Sweep Mode -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_sweep">
-
-        <!-- Sweep Mode Selection -->
-        <div class="form-group">
-            <label for="sweep_mode">Select Sweep Mode:</label>
-            <select name="sweep_mode" id="sweep_mode" class="form-control" required>
-                <option value="hold">Single</option>
-                <option value="int">Repeat</option>
-                <option value="ext">EXT</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-dark mt-3">Set Sweep Mode</button>
-    </form>
-
-    <hr class="my-5">
-        <p>Operational Parameter Stuff</p>
-    <hr class="my-5">
-
-    <!-- Form to set SIG Level -->
-    <form method="POST">
-        <input type="hidden" name="action" value="set_sig_level">
-
-        <!-- SIG Level Selection -->
-        <div class="form-group">
-            <label for="sig_level">Select SIG Level (mV):</label>
-            <select name="sig_level" id="sig_level" class="form-control" required>
-                <option value="30">30</option>
-                <option value="10">10</option>
-            </select>
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-dark mt-3">Set SIG Level</button>
-    </form>
-
-    <hr class="my-5">
-
-    <!-- Form to Start Measurement -->
-    <form method="POST">
-        <input type="hidden" name="action" value="start_measurement">
-        <button type="submit" class="btn btn-primary btn-lg">Start Measurement</button>
-    </form>
-
-</div>
+    <script>
+        // Function to auto-submit the mode form when selection changes
+        function autoApplyMode(selectElement) {
+            // Save the selected value to localStorage
+            localStorage.setItem('mode', selectElement.value);
+            
+            // Update the UI immediately
+            updateMeasurementMode();
+            
+            // Submit the form
+            document.getElementById('mode-form').submit();
+        }
+        
+        // Helper to save selection to localStorage when form is submitted
+        document.querySelectorAll('.measurement-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                // Get the select element inside this form
+                const select = this.querySelector('select');
+                if (select) {
+                    // Save the current selection to localStorage
+                    localStorage.setItem(select.id, select.value);
+                    
+                    // Special handling for function selection
+                    if (select.id === 'function') {
+                        const mode = document.getElementById('mode').value;
+                        localStorage.setItem('function_' + mode, select.value);
+                    }
+                }
+            });
+        });
+        
+        // Load saved selections from localStorage
+        function loadSavedSelections() {
+            document.querySelectorAll('.persist-select').forEach(select => {
+                // Skip function select as it's handled separately
+                if (select.id === 'function') return;
+                
+                // Check if we have a saved value for this select
+                const savedValue = localStorage.getItem(select.id);
+                if (savedValue) {
+                    // Set the select to the saved value
+                    select.value = savedValue;
+                }
+            });
+        }
+        
+        // Function to populate function dropdown options based on measurement mode
+        function updateFunctionOptions(mode) {
+            const functionSelect = document.getElementById('function');
+            functionSelect.innerHTML = ''; // Clear existing options
+            
+            let options;
+            
+            if (mode === 'cgt') {
+                // C-V measurement function options
+                options = [
+                    { value: 'cg', text: 'C-G' },
+                    { value: 'c', text: 'C' },
+                    { value: 'g', text: 'G' }
+                ];
+            } else if (mode === 'ct') {
+                // C-T measurement function options
+                options = [
+                    { value: 'cgt', text: 'C-G-t' },
+                    { value: 'ct', text: 'C-t' },
+                    { value: 'gt', text: 'G-t' }
+                ];
+            }
+            
+            // Add options to select
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.value;
+                optionElement.textContent = option.text;
+                functionSelect.appendChild(optionElement);
+            });
+            
+            // Try to set the previously saved value for this mode
+            const savedFunctionValue = localStorage.getItem('function_' + mode);
+            
+            if (savedFunctionValue) {
+                // Check if the option exists in the current options
+                const optionExists = Array.from(functionSelect.options).some(opt => opt.value === savedFunctionValue);
+                
+                if (optionExists) {
+                    functionSelect.value = savedFunctionValue;
+                } else {
+                    // If not found, set the first option
+                    functionSelect.selectedIndex = 0;
+                    // And save this as the new default for this mode
+                    localStorage.setItem('function_' + mode, functionSelect.value);
+                }
+            } else {
+                // If no saved value, select first option and save it
+                functionSelect.selectedIndex = 0;
+                localStorage.setItem('function_' + mode, functionSelect.value);
+            }
+        }
+        
+        // Function to update UI based on selected measurement mode
+        function updateMeasurementMode() {
+            const mode = document.getElementById('mode').value;
+            console.log('Current measurement mode:', mode);
+            
+            // Update function options based on mode
+            updateFunctionOptions(mode);
+            
+            // Show/hide bias settings panel based on mode
+            const biasSettingsPanel = document.getElementById('bias-settings-panel');
+            if (mode === 'cgt') {
+                biasSettingsPanel.style.display = 'block';
+            } else {
+                biasSettingsPanel.style.display = 'none';
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load any saved selections (except function which is handled by updateMeasurementMode)
+            loadSavedSelections();
+            
+            // Set default mode if not already set
+            const modeSelect = document.getElementById('mode');
+            if (!localStorage.getItem('mode')) {
+                localStorage.setItem('mode', 'cgt');
+                modeSelect.value = 'cgt'; // Default to C-V measurement
+            } else {
+                modeSelect.value = localStorage.getItem('mode');
+            }
+            
+            // Update UI based on current measurement mode
+            updateMeasurementMode();
+        });
+    </script>
+</body>
+</html>
 {% endblock %}
