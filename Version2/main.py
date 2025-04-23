@@ -411,6 +411,25 @@ def configuration():
                             flash("Sweep mode set to Single successfully!", "success")
                         case _:
                             flash("Invalid sweep mode selected.", "error")
+                case "set_bias_mode":
+                    bias_mode = request.form.get("bias_mode")
+                    match bias_mode:
+                        case "dc":
+                            #ctrl.set_DCV()
+                            flash("Bias mode set to DC successfully!", "success")
+                        case "single":
+                            ctrl.single_config()
+                            flash("Bias mode set to Single successfully!", "success")
+                        case "double":
+                            ctrl.set_double()
+                            flash("Bias mode set to Double successfully!", "success")
+                        case "pulsed":
+                            pulse_width = float(request.form.get("pulse_width", 0.1))  # Default to 0.1 if not provided
+                            pulse_amplitude = float(request.form.get("pulse_amplitude", 5.0))  # Default to 5.0 if not provided
+                            ctrl.set_Pulse(pulse_amplitude)  # Set pulse amplitude
+                            ctrl.set_Measure_pulse(pulse_width)  # Set pulse width
+                        case _:
+                            flash("Invalid bias mode selected.", "error")
                 case "set_sig_level":
                     sig_level = request.form.get("sig_level")
                     match sig_level:

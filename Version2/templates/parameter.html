@@ -10,49 +10,66 @@
     {% endfor %}
 </div>
 
-
 <!-- Parameter Settings Form -->
 <form action="/parameter" method="post" class="p-4 border rounded shadow-sm bg-white mb-5">
-    <div class="mb-3">
-        <label for="DC_V" class="form-label">DC Voltage (DC_V):</label>
-        <input type="number" step="0.01" class="form-control" id="DC_V" name="DC_V" value="{{ settings.DC_V }}" required>
+    <div id="cv_settings">
+        <div class="mb-3">
+            <label for="DC_V" class="form-label">DC Voltage (DC_V):</label>
+            <input type="number" step="0.01" class="form-control" id="DC_V" name="DC_V" value="{{ settings.DC_V }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="Start_V" class="form-label">Start Voltage (Start_V):</label>
+            <input type="number" step="0.01" class="form-control" id="Start_V" name="Start_V" value="{{ settings.Start_V }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="Stop_V" class="form-label">Stop Voltage (Stop_V):</label>
+            <input type="number" step="0.01" class="form-control" id="Stop_V" name="Stop_V" value="{{ settings.Stop_V }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="Step_V" class="form-label">Step Voltage (Step_V):</label>
+            <input type="number" step="0.01" class="form-control" id="Step_V" name="Step_V" value="{{ settings.Step_V }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="Hold_T" class="form-label">Hold Time (Hold_T):</label>
+            <input type="number" step="0.01" class="form-control" id="Hold_T" name="Hold_T" value="{{ settings.Hold_T }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="Step_T" class="form-label">Step Time (Step_T):</label>
+            <input type="number" step="0.01" class="form-control" id="Step_T" name="Step_T" value="{{ settings.Step_T }}" required>
+        </div>
     </div>
-    <div class="mb-3">
-        <label for="Start_V" class="form-label">Start Voltage (Start_V):</label>
-        <input type="number" step="0.01" class="form-control" id="Start_V" name="Start_V" value="{{ settings.Start_V }}" required>
+
+    <!-- C-T Measurement Fields -->
+    <div id="ct_settings" style="display: none;">
+        <div class="mb-3">
+            <label for="pulse" class="form-label">Pulse (V):</label>
+            <input type="number" step="0.01" class="form-control" id="pulse" name="pulse" value="0">
+        </div>
+        <div class="mb-3">
+            <label for="meas" class="form-label">MEAS:</label>
+            <input type="number" step="0.01" class="form-control" id="meas" name="meas" value="0">
+        </div>
+        <div class="mb-3">
+            <label for="nofread" class="form-label">NO OFREAD:</label>
+            <input type="number" step="1" class="form-control" id="nofread" name="nofread" value="10">
+        </div>
+        <div class="mb-3">
+            <label for="pulse_width" class="form-label">Pulse Width (s):</label>
+            <input type="number" step="0.01" class="form-control" id="pulse_width" name="pulse_width" value="1">
+        </div>
+        <div class="mb-3">
+            <label for="meas_interval" class="form-label">MEAS Interval (s):</label>
+            <input type="number" step="0.01" class="form-control" id="meas_interval" name="meas_interval" value="0.1">
+        </div>
     </div>
-    <div class="mb-3">
-        <label for="Stop_V" class="form-label">Stop Voltage (Stop_V):</label>
-        <input type="number" step="0.01" class="form-control" id="Stop_V" name="Stop_V" value="{{ settings.Stop_V }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="Step_V" class="form-label">Step Voltage (Step_V):</label>
-        <input type="number" step="0.01" class="form-control" id="Step_V" name="Step_V" value="{{ settings.Step_V }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="Hold_T" class="form-label">Hold Time (Hold_T):</label>
-        <input type="number" step="0.01" class="form-control" id="Hold_T" name="Hold_T" value="{{ settings.Hold_T }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="Step_T" class="form-label">Step Time (Step_T):</label>
-        <input type="number" step="0.01" class="form-control" id="Step_T" name="Step_T" value="{{ settings.Step_T }}" required>
-    </div>
+
+    <!-- Measurement Type Selector -->
     <div class="mb-3">
         <label for="measurement_type" class="form-label">Measurement Type:</label>
         <select class="form-select" id="measurement_type" name="measurement_type" required>
             <option value="cv" selected>C-V Measurement</option>
             <option value="ct">C-T Measurement</option>
-            <option value="pulse">Pulse</option>
         </select>
-    </div>
-
-    <!-- Pulse-Specific Settings -->
-    <div id="pulse_settings" style="display: none;">
-        <label for="pulse_width">Pulse Width (s):</label>
-        <input type="number" step="0.01" name="pulse_width" id="pulse_width" value="0.1">
-
-        <label for="pulse_amplitude">Pulse Amplitude (V):</label>
-        <input type="number" step="0.1" name="pulse_amplitude" id="pulse_amplitude" value="5.0">
     </div>
 
     <!-- Action Buttons -->
@@ -67,15 +84,29 @@
 </div>
 
 <script>
-    // Show/Hide Pulse Settings Based on Measurement Type
+    // Show/Hide Settings Based on Measurement Type
     const measurementType = document.getElementById("measurement_type");
-    const pulseSettings = document.getElementById("pulse_settings");
+    const cvSettings = document.getElementById("cv_settings");
+    const ctSettings = document.getElementById("ct_settings");
 
     measurementType.addEventListener("change", function () {
-        if (this.value === "pulse") {
-            pulseSettings.style.display = "block";
+        if (this.value === "ct") {
+            cvSettings.style.display = "none";
+            ctSettings.style.display = "block";
         } else {
-            pulseSettings.style.display = "none";
+            cvSettings.style.display = "block";
+            ctSettings.style.display = "none";
+        }
+    });
+
+    // Initialize the correct settings on page load
+    document.addEventListener("DOMContentLoaded", function () {
+        if (measurementType.value === "ct") {
+            cvSettings.style.display = "none";
+            ctSettings.style.display = "block";
+        } else {
+            cvSettings.style.display = "block";
+            ctSettings.style.display = "none";
         }
     });
 </script>
