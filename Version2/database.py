@@ -11,6 +11,8 @@ def init_db():
     """Initialize the database and create necessary tables."""
     conn = sqlite3.connect(DB_path)
     cursor = conn.cursor()
+
+    # Create the users table if it doesn't exist
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,6 +23,8 @@ def init_db():
             is_admin INTEGER NOT NULL DEFAULT 0
         )
     ''')
+
+    # Create the measurements table if it doesn't exist
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS measurements (
             measurement_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,19 +32,20 @@ def init_db():
             time_recorded TIME NOT NULL,
             user_id INTEGER NOT NULL,
             test_type TEXT NOT NULL,
-            csv_file_path TEXT,
+            csv_file_path TEXT,  -- Ensure this column exists
+            file_path TEXT,      -- Ensure this column exists
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
-    
-    # Create a demo user if it doesn't exist
-    cursor.execute("SELECT id FROM users WHERE email = ?", ("demo@example.com",))
-    if not cursor.fetchone():
-        cursor.execute('''
-            INSERT INTO users (first_name, last_name, email, password, is_admin)
-            VALUES (?, ?, ?, ?, ?)
-        ''', ("DEMO", "User", "demo@example.com", "demo123", 0))
-    
+
+    # Check if the `csv_file_path` column exists, and add it if it doesn't
+    cursor.execute("PRAGMA table_info(measurements)")
+    columns = [column[1] for column in cursor.fetchall()]
+    if "csv_file_path" not in columns:
+        cursor.execute("ALTER TABLE measurements ADD COLUMN csv_file_path TEXT")
+    if "file_path" not in columns:
+        cursor.execute("ALTER TABLE measurements ADD COLUMN file_path TEXT")
+
     conn.commit()
     conn.close()
 
@@ -88,7 +93,7 @@ def delete_user_by_id(user_id):
     conn.close()
 
 
-def add_measurement(user_id, test_type, csv_file_path):
+def add_measurement(user_id, test_type, csv_file_path, file_path):
     """Add a new measurement to the database."""
     conn = sqlite3.connect(DB_path)
     cursor = conn.cursor()
@@ -99,9 +104,9 @@ def add_measurement(user_id, test_type, csv_file_path):
     time_recorded = current_datetime.time().strftime('%H:%M:%S')  # Convert time to string
 
     cursor.execute('''
-        INSERT INTO measurements (date_recorded, time_recorded, user_id, test_type, csv_file_path)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (date_recorded, time_recorded, user_id, test_type, csv_file_path))
+        INSERT INTO measurements (date_recorded, time_recorded, user_id, test_type, csv_file_path, file_path)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (date_recorded, time_recorded, user_id, test_type, csv_file_path, file_path))
 
     conn.commit()
     conn.close()

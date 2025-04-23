@@ -22,6 +22,13 @@ class controller:
         self.Step_T = Step_T
         
         self.conn = conn
+
+    # Ensure the connection object has an 'inst' attribute
+        if hasattr(self.conn, 'inst'):
+            self.inst = self.conn.inst
+        else:
+            raise AttributeError("The connection object does not have an 'inst' attribute.")
+        
     # initialize the instrument measurement
 
     def measure_start(self):
