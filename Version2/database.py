@@ -32,27 +32,51 @@ def init_db():
             time_recorded TIME NOT NULL,
             user_id INTEGER NOT NULL,
             test_type TEXT NOT NULL,
-            csv_file_path TEXT,  -- Ensure this column exists
-            file_path TEXT,      -- Ensure this column exists
+            csv_file_path TEXT,
+            file_path TEXT,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
 
-    # Check if the `csv_file_path` column exists, and add it if it doesn't
-    cursor.execute("PRAGMA table_info(measurements)")
-    columns = [column[1] for column in cursor.fetchall()]
-    if "csv_file_path" not in columns:
-        cursor.execute("ALTER TABLE measurements ADD COLUMN csv_file_path TEXT")
-    if "file_path" not in columns:
-        cursor.execute("ALTER TABLE measurements ADD COLUMN file_path TEXT")
+    # Check if the `users` table is empty
+    cursor.execute("SELECT COUNT(*) FROM users")
+    user_count = cursor.fetchone()[0]
+
+    if user_count == 0:
+        # Add the first user as an admin
+        hashed_password = bcrypt.hashpw("Welcome1".encode('utf-8'), bcrypt.gensalt())
+        cursor.execute('''
+            INSERT INTO users (first_name, last_name, email, password, is_admin)
+            VALUES (?, ?, ?, ?, ?)
+        ''', ("Admin", "User", "admin@example.com", hashed_password, 1))
+        print("Admin user created with email: admin@example.com and password: Welcome1")
+
+        # Add a demo user with simple credentials
+        cursor.execute('''
+            INSERT INTO users (first_name, last_name, email, password, is_admin)
+            VALUES (?, ?, ?, ?, ?)
+        ''', ("Demo", "User", "demo@example.com", "demo", 0))
+        print("Demo user created with email: demo@example.com and password: demo")
 
     conn.commit()
     conn.close()
 
-def add_user(first_name, last_name, email, password, is_admin=0):
+def add_user(first_name, last_name, email, password, is_admin=None):
     """Add a new user to the database."""
     conn = sqlite3.connect(DB_path)
     cursor = conn.cursor()
+
+    # Check if there are any existing admin users
+    cursor.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1")
+    admin_count = cursor.fetchone()[0]
+
+    # Automatically make the first user after initialization an admin if no admins exist
+    if admin_count == 0:
+        is_admin = 1
+    elif is_admin is None:
+        is_admin = 0
+
+    # Add the user to the database
     cursor.execute('''
         INSERT INTO users (first_name, last_name, email, password, is_admin)
         VALUES (?, ?, ?, ?, ?)

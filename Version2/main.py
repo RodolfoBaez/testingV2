@@ -1,3 +1,4 @@
+# Import Statements and Flask App Initialization ###################################################################################################################################################
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
 from controller import controller
@@ -429,56 +430,6 @@ def configuration():
         flash(f"Error: {str(e)}", "error")
         return redirect(url_for("home"))
 
-@app.route('/documentation', methods=["GET", "POST"])
-def documentation():
-    # Check if the user is logged in
-    if 'email' not in session:
-        flash("Please log in to access this page.", "error")
-        return redirect(url_for("login"))
-
-    # Get the user information
-    user = get_user_by_email(session['email'])
-    if not user:
-        flash("User not found. Please log in again.", "error")
-        return redirect(url_for("login"))
-
-    # Ensure the user is an admin
-    if user[5] == 0:  # Check the `is_admin` value
-        flash("You do not have permission to access this page.", "error")
-        return redirect(url_for("login"))
-
-    if request.method == "POST":
-        action = request.form.get("action")
-        user_id = request.form.get("user_id")
-
-        conn = sqlite3.connect(DB_path)
-        cursor = conn.cursor()
-
-        if action == "delete":
-            # Delete the user
-            cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
-            flash("User deleted successfully!", "success")
-        elif action == "grant_admin":
-            # Grant admin access
-            cursor.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (user_id,))
-            flash("Admin access granted!", "success")
-        elif action == "revoke_admin":
-            # Revoke admin access
-            cursor.execute("UPDATE users SET is_admin = 0 WHERE id = ?", (user_id,))
-            flash("Admin access revoked!", "success")
-
-        conn.commit()
-        conn.close()
-
-    # Fetch all users except the demo user
-    conn = sqlite3.connect(DB_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT first_name, last_name, email, id, is_admin FROM users WHERE email != 'demo@example.com'")
-    users = cursor.fetchall()
-    conn.close()
-
-    return render_template("documentation.html", users=users, logged_in_email=session['email'])
-
 @app.route('/pulse_graph')
 def pulsegraph():
     # Check if the user is logged in
@@ -633,58 +584,57 @@ def delete_measurement(measurement_id):
     conn.close()
     return redirect(url_for("history"))
 
-@app.route('/settings', methods=["GET", "POST"])
-def settings():
+# USER PAGES ################################################################################################################################################
+@app.route('/documentation', methods=["GET", "POST"])
+def documentation():
     # Check if the user is logged in
     if 'email' not in session:
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
-    # Prevent the demo user from accessing the settings page
-    if session['email'] == "demo@example.com":
-        flash("Demo user cannot access the settings page.", "error")
-        return redirect(url_for("home"))
-
-    # Get the current user
+    # Get the user information
     user = get_user_by_email(session['email'])
     if not user:
         flash("User not found. Please log in again.", "error")
         return redirect(url_for("login"))
 
+    # Ensure the user is an admin
+    if user[5] == 0:  # Check the `is_admin` value
+        flash("You do not have permission to access this page.", "error")
+        return redirect(url_for("login"))
+
     if request.method == "POST":
-        current_password = request.form.get("current_password")
-        new_password = request.form.get("new_password")
-        confirm_password = request.form.get("confirm_password")
-        new_email = request.form.get("email")
+        action = request.form.get("action")
+        user_id = request.form.get("user_id")
 
-        # Validate current password
-        if not bcrypt.checkpw(current_password.encode('utf-8'), user[4]):  # Assuming user[4] is the hashed password
-            flash("Current password is incorrect.", "error")
-            return redirect(url_for("settings"))
-
-        # Validate new password and confirmation
-        if new_password and new_password != confirm_password:
-            flash("New password and confirmation do not match.", "error")
-            return redirect(url_for("settings"))
-
-        # Update the user's email and/or password
         conn = sqlite3.connect(DB_path)
         cursor = conn.cursor()
-        if new_email:
-            cursor.execute("UPDATE users SET email = ? WHERE id = ?", (new_email, user[0]))
-            session['email'] = new_email  # Update session email
-        if new_password:
-            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())  # Hash and salt the new password
-            cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed_password, user[0]))
+
+        if action == "delete":
+            # Delete the user
+            cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            flash("User deleted successfully!", "success")
+        elif action == "grant_admin":
+            # Grant admin access
+            cursor.execute("UPDATE users SET is_admin = 1 WHERE id = ?", (user_id,))
+            flash("Admin access granted!", "success")
+        elif action == "revoke_admin":
+            # Revoke admin access
+            cursor.execute("UPDATE users SET is_admin = 0 WHERE id = ?", (user_id,))
+            flash("Admin access revoked!", "success")
+
         conn.commit()
         conn.close()
 
-        flash("Settings updated successfully!", "success")
-        return redirect(url_for("settings"))
+    # Fetch all users except the demo user
+    conn = sqlite3.connect(DB_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT first_name, last_name, email, id, is_admin FROM users WHERE email != 'demo@example.com'")
+    users = cursor.fetchall()
+    conn.close()
 
-    return render_template("settings.html", user=user)
+    return render_template("documentation.html", users=users, logged_in_email=session['email'])
 
-# USER PAGES ################################################################################################################################################
 @app.route('/login', methods=["POST", "GET"])
 def login():
     if request.method == "POST":
@@ -767,7 +717,61 @@ def logout():
     flash("You have been logged out.", "success")
     return redirect(url_for("home"))
 
+@app.route('/settings', methods=["GET", "POST"])
+def settings():
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Prevent the demo user from accessing the settings page
+    if session['email'] == "demo@example.com":
+        flash("Demo user cannot access the settings page.", "error")
+        return redirect(url_for("home"))
+
+    # Get the current user
+    user = get_user_by_email(session['email'])
+    if not user:
+        flash("User not found. Please log in again.", "error")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        current_password = request.form.get("current_password")
+        new_password = request.form.get("new_password")
+        confirm_password = request.form.get("confirm_password")
+        new_email = request.form.get("email")
+
+        # Validate current password
+        if not bcrypt.checkpw(current_password.encode('utf-8'), user[4]):  # Assuming user[4] is the hashed password
+            flash("Current password is incorrect.", "error")
+            return redirect(url_for("settings"))
+
+        # Validate new password and confirmation
+        if new_password and new_password != confirm_password:
+            flash("New password and confirmation do not match.", "error")
+            return redirect(url_for("settings"))
+
+        # Update the user's email and/or password
+        conn = sqlite3.connect(DB_path)
+        cursor = conn.cursor()
+        if new_email:
+            cursor.execute("UPDATE users SET email = ? WHERE id = ?", (new_email, user[0]))
+            session['email'] = new_email  # Update session email
+        if new_password:
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())  # Hash and salt the new password
+            cursor.execute("UPDATE users SET password = ? WHERE id = ?", (hashed_password, user[0]))
+        conn.commit()
+        conn.close()
+
+        flash("Settings updated successfully!", "success")
+        return redirect(url_for("settings"))
+
+    return render_template("settings.html", user=user)
+
+# NON PAGES ####################################################################################################################################################
 @app.route('/uploads/<path:filename>')
+
+# LAUNCHING THE APP #######################################################################################################################################
 def serve_uploads(filename):
     uploads_folder = os.path.join(os.path.dirname(__file__), 'uploads')
     return send_from_directory(uploads_folder, filename)
