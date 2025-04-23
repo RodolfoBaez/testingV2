@@ -603,6 +603,39 @@ def delete_measurement(measurement_id):
     conn.close()
     return redirect(url_for("history"))
 
+@app.route('/admin_measure', methods=["GET"])
+def admin_measure():
+    """Admin page to view all measurements."""
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Get the user information
+    user = get_user_by_email(session['email'])
+    if not user:
+        flash("User not found. Please log in again.", "error")
+        return redirect(url_for("login"))
+
+    # Ensure the user is an admin
+    if user[5] == 0:  # Check the `is_admin` value
+        flash("You do not have permission to access this page.", "error")
+        return redirect(url_for("home"))
+
+    # Fetch all measurements from the database
+    conn = sqlite3.connect(DB_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT m.measurement_id, m.date_recorded, m.time_recorded, u.first_name || ' ' || u.last_name AS full_name, m.test_type
+        FROM measurements m
+        JOIN users u ON m.user_id = u.id
+        ORDER BY m.date_recorded DESC, m.time_recorded DESC
+    ''')
+    measurements = cursor.fetchall()
+    conn.close()
+
+    return render_template("admin_measure.html", measurements=measurements)
+
 # USER PAGES ################################################################################################################################################
 @app.route('/documentation', methods=["GET", "POST"])
 def documentation():
