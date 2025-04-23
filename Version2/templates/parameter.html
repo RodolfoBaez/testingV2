@@ -1,7 +1,7 @@
 {% extends "base.html" %}
-{% block title %}Measurement Settings{% endblock %}
+{% block title %}Parameter Settings{% endblock %}
 {% block content %}
-<h2 class="mt-5 text-center">HP4280A Measurement Settings</h2>
+<h2 class="mt-5 text-center">HP4280A Parameter Settings</h2>
 
 <!-- Terminal Output Section -->
 <div class="alert {{ 'alert-success' if connection_status == 'success' else 'alert-danger' }} my-4">
@@ -11,8 +11,8 @@
 </div>
 
 
-<!-- Measurement Settings Form -->
-<form action="/measurement" method="post" class="p-4 border rounded shadow-sm bg-white mb-5">
+<!-- Parameter Settings Form -->
+<form action="/parameter" method="post" class="p-4 border rounded shadow-sm bg-white mb-5">
     <div class="mb-3">
         <label for="DC_V" class="form-label">DC Voltage (DC_V):</label>
         <input type="number" step="0.01" class="form-control" id="DC_V" name="DC_V" value="{{ settings.DC_V }}" required>
@@ -61,6 +61,10 @@
         <button type="submit" name="action" value="start_measurement" class="btn btn-outline-success">Start Measurement</button>
     </div>
 </form>
+
+<div class="mt-4 text-center">
+    <a href="/configuration" class="btn btn-outline-secondary">Back to Configuration</a>
+</div>
 
 <script>
     // Show/Hide Pulse Settings Based on Measurement Type

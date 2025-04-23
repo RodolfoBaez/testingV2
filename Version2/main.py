@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_from_directory
 from controller import controller
 from database import init_db, add_user, get_user_by_id, get_user_by_email, add_measurement, get_measurements
 from simulated_visacon import SimulatedVisaCon
@@ -8,12 +8,32 @@ import csv
 import time
 import webview
 import bcrypt
+import datetime
 
 # Define the path to the database file
 DB_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"  # Required for flashing messages and session management
+
+@app.template_filter('datetimeformat')
+def datetimeformat(value, format='%Y-%m-%d'):
+    """Custom filter to format datetime values."""
+    try:
+        # Try parsing as a full datetime
+        value = datetime.datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+        try:
+            # Try parsing as a date only
+            value = datetime.datetime.strptime(value, '%Y-%m-%d')
+        except ValueError:
+            try:
+                # Try parsing as a time only
+                value = datetime.datetime.strptime(value, '%H:%M:%S')
+            except ValueError:
+                # If all parsing fails, return the original value
+                return value
+    return value.strftime(format)
 
 # Initialize the database
 init_db()
@@ -31,8 +51,18 @@ def inject_user_info():
     if 'email' in session:
         user = get_user_by_email(session['email'])
         if user:
-            return {'username': f"{user[1]} {user[2]}", 'user_id': user[0], 'email': user[3]}
-    return {'username': None, 'user_id': None, 'email': None}
+            return {
+                'username': f"{user[1]} {user[2]}",  # First name and last name
+                'user_id': user[0],  # User ID
+                'email': user[3],  # Email
+                'is_admin': user[5] == 1  # Check if the user is an admin (assuming `is_admin` is the 6th column)
+            }
+    return {
+        'username': None,
+        'user_id': None,
+        'email': None,
+        'is_admin': False
+    }
 
 # Global Dictionary to store controller instances through session ID
 gpib_connections = {}
@@ -143,8 +173,8 @@ def contributions():
 
 # MEASUREMENT PAGES #######################################################################################################################################
 
-@app.route('/measurement', methods=["GET", "POST"])
-def measurement():
+@app.route('/parameter', methods=["GET", "POST"])
+def parameter():
     # Check if the user is logged in
     if 'email' not in session:
         flash("Please log in to access this page.", "error")
@@ -187,18 +217,41 @@ def measurement():
                     ctrl.sweep_measure()
                     data = ctrl.read_data()
                     if data:
-                        ctrl.mkcsv(data)
+                        # Save data to CSV
+                        csv_file_path = ctrl.mkcsv(data, filename="measurement_data.csv")  # Get the full path
+
+                        # Add the measurement to the database
+                        user = get_user_by_email(session['email'])
+                        measurement_id = add_measurement(
+                            user_id=user[0],
+                            test_type="C-V Measurement",
+                            csv_file_path=csv_file_path,  # Store the full path
+                            file_path=os.path.abspath(csv_file_path)  # Store the absolute path
+                        )
                         flash("C-V Measurement completed! Data saved successfully.", "success")
+                        return redirect(url_for('view_measurement', measurement_id=measurement_id))  # Redirect to view measurement
                     else:
                         flash("No data received during C-V measurement.", "error")
                 elif measurement_type == "ct":
                     ctrl.set_ctfunc()
                     ctrl.default_CT()
-                    ctrl.init_sweep()
+                    ctrl.sweep_measure()
                     data = ctrl.read_data()
                     if data:
-                        ctrl.mkcsv(data)
+                        # Save data to CSV
+                        csv_file_path = "measurement_data_ct.csv"  # Define the CSV file path
+                        ctrl.mkcsv(data, filename=csv_file_path)
+
+                        # Add the measurement to the database
+                        user = get_user_by_email(session['email'])
+                        measurement_id = add_measurement(
+                            user_id=user[0],
+                            test_type="C-T Measurement",
+                            csv_file_path=csv_file_path,
+                            file_path=os.path.abspath(csv_file_path)
+                        )
                         flash("C-T Measurement completed! Data saved successfully.", "success")
+                        return redirect(url_for('view_measurement', measurement_id=measurement_id))  # Redirect to view measurement
                     else:
                         flash("No data received during C-T measurement.", "error")
                 elif measurement_type == "pulse":
@@ -213,7 +266,7 @@ def measurement():
                     flash("Pulse Sweep Measurement completed! Data saved successfully.", "success")
 
         connection_status, terminal_output = check_connection_status()
-        return render_template("measurement.html", connection_status=connection_status, terminal_output=terminal_output, settings=session["settings"])
+        return render_template("parameter.html", connection_status=connection_status, terminal_output=terminal_output, settings=session["settings"])
 
     except Exception as e:
         flash(f"Error: {str(e)}", "error")
@@ -229,8 +282,8 @@ def graph():
     # Render the splice graph page
     return render_template("graph.html")
 
-@app.route('/wizard', methods=["GET", "POST"])
-def wizard():
+@app.route('/configuration', methods=["GET", "POST"])
+def configuration():
     # Check if the user is logged in
     if 'email' not in session:
         flash("Please log in to access this page.", "error")
@@ -371,7 +424,7 @@ def wizard():
                 case _:
                     flash("Invalid action selected.", "error")
 
-        return render_template("wizard.html", connection_type="Real Connection", settings=session["settings"])
+        return render_template("configuration.html", connection_type="Real Connection", settings=session["settings"])
     except Exception as e:
         flash(f"Error: {str(e)}", "error")
         return redirect(url_for("home"))
@@ -436,7 +489,7 @@ def pulsegraph():
     # Render the pulse graph page
     return render_template("pulsegraph.html")
 
-@app.route('/wizard_graph')
+@app.route('/wizardgraph')
 def wizardgraph():
     # Check if the user is logged in
     if 'email' not in session:
@@ -527,8 +580,21 @@ def view_measurement(measurement_id):
         flash("Measurement not found.", "error")
         return redirect(url_for("history"))
 
-    # Pass the measurement data and CSV file path to the wizard graph template
-    return render_template("wizardgraph.html", graph_settings={"measurement": measurement, "csv_file_path": measurement[5]})
+    # Verify that the CSV file exists
+    csv_file_path = measurement[5]
+    if not os.path.isabs(csv_file_path):
+        # Convert relative path to absolute path
+        csv_file_path = os.path.join(os.path.dirname(__file__), "uploads", csv_file_path)
+
+    if not os.path.exists(csv_file_path):
+        flash("CSV file not found. Unable to load graph data.", "error")
+        return redirect(url_for("history"))
+
+    # Generate the URL for the CSV file
+    csv_url = url_for('serve_uploads', filename=os.path.basename(csv_file_path))
+
+    # Pass the measurement data and CSV file URL to the wizard graph template
+    return render_template("wizardgraph.html", graph_settings={"measurement": measurement, "csv_file_path": csv_url})
 
 @app.route('/delete_measurement/<int:measurement_id>', methods=["POST"])
 def delete_measurement(measurement_id):
@@ -537,16 +603,34 @@ def delete_measurement(measurement_id):
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
-    # Delete the measurement from the database
+    # Fetch the measurement data to get the file path
     conn = sqlite3.connect(DB_path)
     cursor = conn.cursor()
     cursor.execute('''
-        DELETE FROM measurements WHERE measurement_id = ?
+        SELECT csv_file_path FROM measurements WHERE measurement_id = ?
     ''', (measurement_id,))
-    conn.commit()
-    conn.close()
+    measurement = cursor.fetchone()
 
-    flash("Measurement deleted successfully.", "success")
+    if measurement:
+        csv_file_path = measurement[0]  # Get the file path from the database
+        if csv_file_path and os.path.exists(csv_file_path):
+            try:
+                os.remove(csv_file_path)  # Delete the file from the filesystem
+                print(f"Deleted file: {csv_file_path}")
+            except Exception as e:
+                print(f"Error deleting file: {csv_file_path}. Error: {e}")
+                flash(f"Error deleting file: {csv_file_path}.", "error")
+
+        # Delete the measurement from the database
+        cursor.execute('''
+            DELETE FROM measurements WHERE measurement_id = ?
+        ''', (measurement_id,))
+        conn.commit()
+        flash("Measurement and associated file deleted successfully.", "success")
+    else:
+        flash("Measurement not found.", "error")
+
+    conn.close()
     return redirect(url_for("history"))
 
 @app.route('/settings', methods=["GET", "POST"])
@@ -682,6 +766,11 @@ def logout():
     session.pop("email", None)  # Remove email from session
     flash("You have been logged out.", "success")
     return redirect(url_for("home"))
+
+@app.route('/uploads/<path:filename>')
+def serve_uploads(filename):
+    uploads_folder = os.path.join(os.path.dirname(__file__), 'uploads')
+    return send_from_directory(uploads_folder, filename)
 
 if __name__ == '__main__':
     # Create a WebView window

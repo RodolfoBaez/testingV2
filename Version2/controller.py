@@ -639,19 +639,21 @@ class controller:
             print("No connection to instrument.")
 
     def mkcsv(self, data, filename='data.csv', file_path=None):
+        """
+        Writes the measurement data to a CSV file in the correct format, with date and time added to the filename.
+        """
         if file_path is None:
-            file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData')
-            os.makedirs(file_path, exist_ok=True)
-        path = os.path.join(file_path, filename)
+            uploads_folder = os.path.join(os.path.dirname(__file__), "uploads")
+            os.makedirs(uploads_folder, exist_ok=True)  # Ensure the uploads folder exists
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            filename = f"{os.path.splitext(filename)[0]}_{timestamp}.csv"
+            file_path = os.path.join(uploads_folder, filename)
 
-        formatted_data = []
-        rows = data.split('\n')  # Split the data by newline to get each row
-        for row in rows:
-            if row:  # Check if the row is not empty
-                formatted_data.append(row.split(','))  # Split each row by comma
-        with open(path, mode='a', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerows(formatted_data)  # Write properly formatted rows
-        print("Data saved to CSV")
-
-
+        try:
+            with open(file_path, "w", newline="") as file:
+                file.write(data)
+            print(f"Data saved to {file_path}")
+            return file_path  # Return the full path of the saved file
+        except Exception as e:
+            print(f"Error saving data to CSV: {e}")
+            return None

@@ -1,5 +1,6 @@
 import time
 import random
+import os
 
 class SimulatedVisaCon:
     def __init__(self, addr="GPIB0::17::INSTR", timeout=10000):
@@ -79,3 +80,29 @@ class SimulatedVisaCon:
             print("Simulated: Instrument cleared successfully.")
         else:
             print("Simulated: No instrument connected to clear.")
+
+    # Simulates reading data from the instrument
+    def read(self):
+        print("Simulated read: Returning default sweep data.")
+        return self.simulate_default_sweep()
+
+    # Simulates reading raw data from the instrument
+    def read_raw(self):
+        print("Simulated read_raw: Returning dummy binary data.")
+        # Return some dummy binary data
+        return b"Simulated,Data,1.0,2.0,3.0"
+
+    def simulate_default_sweep(self):
+        """
+        Simulates a default sweep using the provided datasweep0313.csv data.
+        """
+        # Path to the simulated CSV file
+        csv_path = os.path.join(os.path.dirname(__file__), "uploads", "datasweep0313.csv")
+        try:
+            with open(csv_path, "r") as file:
+                data = file.read()
+            print("Simulated sweep data loaded successfully.")
+            return data
+        except FileNotFoundError:
+            print("Simulated sweep data file not found.")
+            return "Error: Simulated data file not found."

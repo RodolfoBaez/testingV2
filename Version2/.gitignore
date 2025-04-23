@@ -7,3 +7,5 @@ testscript.py
 /build/
 /dist/
 EasyCV.spec
+/venv/
+unmark

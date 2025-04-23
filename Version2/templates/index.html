@@ -10,7 +10,7 @@
           {% if username %}
             Welcome back, {{ username }}! Click the button on the right to start your measurement session.
             {% if email == "demo@example.com" %}
-              <br><br>Note: You are currently in demo mode. This mode will use a simulated version of the HP4280A. Any data recorded in this session will not be saved.
+              <br><br>Note: You are currently in demo mode. This mode will use a simulated version of the HP4280A. Any data recorded in this session will not utilize the main device even if connected.
             {% endif %}
           {% else %}
             New here? Sign up to get started with your measurements! It's quick and easy.
@@ -21,7 +21,7 @@
       <div class="col-md-10 mx-auto col-lg-5">
         {% if username %}
           <!-- Show "Start Measurement" button if user is logged in -->
-          <a class="btn btn-lg btn btn-outline-primary w-100" href="/measurement" role="button">Start Measurement</a>
+          <a class="btn btn-lg btn btn-outline-primary w-100" href="/configuration" role="button">Start Measurement</a>
         {% else %}
           <!-- Form tabs to switch between login and signup -->
           <ul class="nav nav-tabs mb-3" id="authTabs" role="tablist">
@@ -110,7 +110,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                Are you sure you want to enter demo mode? This mode uses a simulated version of the HP4280A, and any data recorded in this session will not be saved.
+                Are you sure you want to enter demo mode? This mode uses a simulated version of the HP4280A, and any data recorded in this session will be a simulation.
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

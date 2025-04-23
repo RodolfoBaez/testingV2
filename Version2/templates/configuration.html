@@ -1,23 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Measurement Wizard{% endblock %}
+{% block title %}Measurement Configuration{% endblock %}
 {% block content %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Measurement Wizard</title>
+    <title>Measurement Configuration</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="container mx-auto max-w-3xl p-6">
-        <h1 class="text-3xl font-light text-center text-gray-800 mb-8">Measurement Wizard</h1>
+        <h1 class="text-3xl font-light text-center text-gray-800 mb-8">Measurement Configuration</h1>
         
         <!-- Main Control Panel -->
         <div class="bg-white rounded-lg shadow-md p-6 mb-8">
             <!-- Primary Settings -->
             <div class="mb-8">
-                <h2 class="text-xl font-medium text-gray-700 mb-4">Measurement Configuration</h2>
+                <h2 class="text-xl font-medium text-gray-700 mb-4">Measurement Setup</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <form method="POST" id="mode-form" class="measurement-form space-y-2">
                         <input type="hidden" name="action" value="set_mode">
@@ -168,6 +168,10 @@
             <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-500">
                 Additional bias parameters will be linked to account settings
             </div>
+        </div>
+
+        <div class="mt-8 text-center">
+            <a href="/parameter" class="btn btn-outline-secondary">Go to Parameter Settings</a>
         </div>
     </div>
     

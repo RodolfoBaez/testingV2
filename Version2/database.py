@@ -94,22 +94,19 @@ def delete_user_by_id(user_id):
 
 
 def add_measurement(user_id, test_type, csv_file_path, file_path):
-    """Add a new measurement to the database."""
+    """
+    Add a new measurement to the database and return the measurement ID.
+    """
     conn = sqlite3.connect(DB_path)
     cursor = conn.cursor()
-    current_datetime = datetime.now()
-
-    # Format date and time to string
-    date_recorded = current_datetime.date()
-    time_recorded = current_datetime.time().strftime('%H:%M:%S')  # Convert time to string
-
     cursor.execute('''
-        INSERT INTO measurements (date_recorded, time_recorded, user_id, test_type, csv_file_path, file_path)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (date_recorded, time_recorded, user_id, test_type, csv_file_path, file_path))
-
+        INSERT INTO measurements (user_id, test_type, csv_file_path, file_path, date_recorded, time_recorded)
+        VALUES (?, ?, ?, ?, DATE('now'), TIME('now'))
+    ''', (user_id, test_type, csv_file_path, file_path))
     conn.commit()
+    measurement_id = cursor.lastrowid  # Get the ID of the newly inserted measurement
     conn.close()
+    return measurement_id
 
 
 def get_measurements(user_id=None):

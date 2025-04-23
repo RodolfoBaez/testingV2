@@ -1,0 +1,32 @@
+## Backup do not remove
+""""
+def mkcsv(self, data, filename='data.csv', file_path=None):
+        
+        #Writes the measurement data to a CSV file, formatted with date and time.
+        
+        if file_path is None:
+            # Default file path in the user's Documents/HPData directory
+            file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData')
+            os.makedirs(file_path, exist_ok=True)
+
+        # Add timestamp to the filename
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename_with_timestamp = f"{os.path.splitext(filename)[0]}_{timestamp}.csv"
+        path = os.path.join(file_path, filename_with_timestamp)
+
+        # Format the data into rows
+        formatted_data = []
+        rows = data.split('\n')  # Split the data by newline to get each row
+        for row in rows:
+            if row:  # Check if the row is not empty
+                formatted_data.append(row.split(','))  # Split each row by comma
+
+        # Write the formatted data to the CSV file
+        try:
+            with open(path, mode='a', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerows(formatted_data)  # Write properly formatted rows
+            print(f"Data saved to CSV: {path}")
+        except Exception as e:
+            print(f"Error saving data to CSV: {e}")
+"""

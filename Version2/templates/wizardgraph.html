@@ -19,7 +19,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 <script>
     // Automatically load the CSV file from the server
-    const csvFilePath = "{{ graph_settings.csv_file_path }}";
+    const csvFilePath = "{{ graph_settings.csv_file_path | safe }}";
 
     fetch(csvFilePath)
         .then(response => {

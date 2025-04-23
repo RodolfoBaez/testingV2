@@ -21,8 +21,8 @@
                 {% for measurement in measurements %}
                     <tr>
                         <td>{{ measurement[0] }}</td> <!-- Measurement ID -->
-                        <td>{{ measurement[1] }}</td> <!-- Date -->
-                        <td>{{ measurement[2] }}</td> <!-- Time -->
+                        <td>{{ measurement[1] | datetimeformat('%m/%d/%Y') }}</td> <!-- Date -->
+                        <td>{{ measurement[2] | datetimeformat('%I:%M %p') }}</td> <!-- Time -->
                         <td>{{ measurement[3] }}</td> <!-- Full Name -->
                         <td>{{ measurement[4] }}</td> <!-- Test Type -->
                         <td>
