@@ -198,7 +198,10 @@ def parameter():
                     "Stop_V": float(request.form['Stop_V']),
                     "Step_V": float(request.form['Step_V']),
                     "Hold_T": float(request.form['Hold_T']),
-                    "Step_T": float(request.form['Step_T'])
+                    "Step_T": float(request.form['Step_T']),
+                    "Meas": float(request.form['Meas']),
+                    "pulse": float(request.form['pulse']),
+                    "nofread": int(request.form['nofread'])
                 })
                 # Update controller settings
                 ctrl.set_DCV(session["settings"]["DC_V"])
@@ -207,6 +210,12 @@ def parameter():
                 ctrl.set_StepV(session["settings"]["Step_V"])
                 ctrl.set_Hold_Time(session["settings"]["Hold_T"])
                 ctrl.set_StepT(session["settings"]["Step_T"])
+
+                ctrl.set_td(session[settings]["Step_T"])
+                ctrl.set_th(session["settings"]["Hold_T"])
+                ctrl.set_Measure_pulse(session["settings"]["Meas"])
+                ctrl.set_Pulse(session["settings"]["pulse"])
+                ctrl.set_NOFREAD(session["settings"]["nofread"])
                 flash("Settings updated successfully!", "success")
             elif action == "start_measurement":
                 # Get the measurement type
