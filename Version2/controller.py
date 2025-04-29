@@ -423,23 +423,17 @@ class controller:
             self.command("READ?")
             response = self.ReadBlockResponseAscii()
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            uploads_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
-            os.makedirs(uploads_folder, exist_ok=True)  # Ensure the uploads folder exists
             filename = f"data_{timestamp}.csv"
-            file_path = os.path.join(uploads_folder, filename)
             if response is not None:
                 print("Data Received: ", response)
-                self.mkcsv(response, filename, uploads_folder)
+                self.mkcsv(response, filename)
                 self.command("SW0")
                 self.conn.inst.timeout = 10000
                 print("Sweep Stopped")
-                return file_path  # Return the file path
             else:
                 print("No data received")
-                return None
         else:
             print("No connection to instrument.")
-            return None
     
     """
     def pulse_sweep(self, num, stopv):
@@ -483,7 +477,6 @@ class controller:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             filename = f"data_{timestamp}.csv"
             try:
-                self.set_double()
                 current_end = self.Step_V
                 actual_end = self.Stop_V
                 while current_end < actual_end+self.Step_V:
@@ -624,7 +617,8 @@ class controller:
         else:
             print("No connection to instrument.")
     
-    def read_data(self):
+    ###Deprecated function (query exists...lol)
+    """def read_data(self):
         if self.conn.inst is not None:
             try:
                 self.command("AS")
@@ -636,24 +630,20 @@ class controller:
                 print(f"GPIB Communication Error [{error_code}]: {e.description}")
             return None
         else:
-            print("No connection to instrument.")
+            print("No connection to instrument.")"""
 
     def mkcsv(self, data, filename='data.csv', file_path=None):
-        """
-        Writes the measurement data to a CSV file in the correct format, with date and time added to the filename.
-        """
         if file_path is None:
-            uploads_folder = os.path.join(os.path.dirname(__file__), "uploads")
-            os.makedirs(uploads_folder, exist_ok=True)  # Ensure the uploads folder exists
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            filename = f"{os.path.splitext(filename)[0]}_{timestamp}.csv"
-            file_path = os.path.join(uploads_folder, filename)
+            file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData')
+            os.makedirs(file_path, exist_ok=True)
+        path = os.path.join(file_path, filename)
 
-        try:
-            with open(file_path, "w", newline="") as file:
-                file.write(data)
-            print(f"Data saved to {file_path}")
-            return file_path  # Return the full path of the saved file
-        except Exception as e:
-            print(f"Error saving data to CSV: {e}")
-            return None
+        formatted_data = []
+        rows = data.split('\n')  # Split the data by newline to get each row
+        for row in rows:
+            if row:  # Check if the row is not empty
+                formatted_data.append(row.split(','))  # Split each row by comma
+        with open(path, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(formatted_data)  # Write properly formatted rows
+        print("Data saved to CSV")

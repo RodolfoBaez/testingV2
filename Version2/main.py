@@ -105,7 +105,8 @@ def get_controller():
         # Connect the GPIB connection
         gpib_connection.connect()
         if not gpib_connection.check_connection():
-            raise Exception("Failed to connect to the GPIB device.")
+            raise Exception("Failed to connect to the GPIB device. If reconnected, please wait 10 seconds before trying again.")
+        
 
         # Create a controller instance and store it in the dictionary
         gpib_connections[session_id] = controller(
@@ -198,10 +199,7 @@ def parameter():
                     "Stop_V": float(request.form['Stop_V']),
                     "Step_V": float(request.form['Step_V']),
                     "Hold_T": float(request.form['Hold_T']),
-                    "Step_T": float(request.form['Step_T']),
-                    "Meas": float(request.form['Meas']),
-                    "pulse": float(request.form['pulse']),
-                    "nofread": int(request.form['nofread'])
+                    "Step_T": float(request.form['Step_T'])
                 })
                 # Update controller settings
                 ctrl.set_DCV(session["settings"]["DC_V"])
@@ -210,13 +208,16 @@ def parameter():
                 ctrl.set_StepV(session["settings"]["Step_V"])
                 ctrl.set_Hold_Time(session["settings"]["Hold_T"])
                 ctrl.set_StepT(session["settings"]["Step_T"])
-
-                ctrl.set_td(session[settings]["Step_T"])
-                ctrl.set_th(session["settings"]["Hold_T"])
-                ctrl.set_Measure_pulse(session["settings"]["Meas"])
-                ctrl.set_Pulse(session["settings"]["pulse"])
-                ctrl.set_NOFREAD(session["settings"]["nofread"])
                 flash("Settings updated successfully!", "success")
+                ctrl.set_td(2) # Set the delay time to 2 seconds
+                ctrl.set_th(2) # Set the hold time to 2 seconds
+                ctrl.set_Measure_pulse(0.10) # Set the measure pulse to 0.10 seconds
+                ctrl.set_Pulse(3) # Set the number of pulses to 3
+                ctrl.set_NOFREAD(10) # Set the number of reads to 10
+            elif action == "start_pulse_sweep":
+                # Perform pulse sweep measurement
+                    ctrl.pulse_sweep()
+                    flash("Pulse Sweep Measurement completed! Data saved successfully.", "success")
             elif action == "start_measurement":
                 # Get the measurement type
                 measurement_type = request.form.get("measurement_type")
@@ -225,7 +226,7 @@ def parameter():
                 if measurement_type == "cv":
                     ctrl.single_config()
                     ctrl.sweep_measure()
-                    data = ctrl.read_data()
+                    """data = ctrl.read_data()
                     if data:
                         # Save data to CSV
                         csv_file_path = ctrl.mkcsv(data, filename="measurement_data.csv")  # Get the full path
@@ -241,10 +242,11 @@ def parameter():
                         flash("C-V Measurement completed! Data saved successfully.", "success")
                         return redirect(url_for('view_measurement', measurement_id=measurement_id))  # Redirect to view measurement
                     else:
-                        flash("No data received during C-V measurement.", "error")
+                        flash("No data received during C-V measurement.", "error")"""
                 elif measurement_type == "ct":
                     ctrl.set_ctfunc()
                     ctrl.default_CT()
+                    
                     ctrl.sweep_measure()
                     data = ctrl.read_data()
                     if data:
@@ -264,16 +266,6 @@ def parameter():
                         return redirect(url_for('view_measurement', measurement_id=measurement_id))  # Redirect to view measurement
                     else:
                         flash("No data received during C-T measurement.", "error")
-                elif measurement_type == "pulse":
-                    # Configure pulse-specific settings
-                    pulse_width = float(request.form.get("pulse_width", 0.1))  # Default to 0.1 if not provided
-                    pulse_amplitude = float(request.form.get("pulse_amplitude", 5.0))  # Default to 5.0 if not provided
-                    ctrl.set_Pulse(pulse_amplitude)  # Set pulse amplitude
-                    ctrl.set_Measure_pulse(pulse_width)  # Set pulse width
-
-                    # Perform pulse sweep measurement
-                    ctrl.pulse_sweep()
-                    flash("Pulse Sweep Measurement completed! Data saved successfully.", "success")
 
         connection_status, terminal_output = check_connection_status()
         return render_template("parameter.html", connection_status=connection_status, terminal_output=terminal_output, settings=session["settings"])
@@ -315,7 +307,11 @@ def configuration():
                     if csv_file_path:
                         # Add the measurement to the database
                         user = get_user_by_email(session['email'])
-                        add_measurement(user_id=user[0], test_type="Sweep", csv_file_path=csv_file_path)
+                        measurement_id = add_measurement(
+                            user_id=user[0], 
+                            test_type="C-V Measurement",
+                            csv_file_path=csv_file_path
+                        )
                         flash("Measurement started successfully! Data saved to CSV.", "success")
                     else:
                         flash("Measurement failed. No data received.", "error")
@@ -431,12 +427,7 @@ def configuration():
                             flash("Bias mode set to Single successfully!", "success")
                         case "double":
                             ctrl.set_double()
-                            flash("Bias mode set to Double successfully!", "success")
-                        case "pulsed":
-                            pulse_width = float(request.form.get("pulse_width", 0.1))  # Default to 0.1 if not provided
-                            pulse_amplitude = float(request.form.get("pulse_amplitude", 5.0))  # Default to 5.0 if not provided
-                            ctrl.set_Pulse(pulse_amplitude)  # Set pulse amplitude
-                            ctrl.set_Measure_pulse(pulse_width)  # Set pulse width
+                            flash("Bias mode set to Double successfully!", "success") 
                         case _:
                             flash("Invalid bias mode selected.", "error")
                 case "set_sig_level":
@@ -489,34 +480,26 @@ def wizardgraph():
 
 @app.route('/reset_connection', methods=["POST"])
 def reset_connection():
-    # Check if the user is logged in
     if 'email' not in session:
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
-    # Get the user information
-    session_id = session.get('email')
-    if session_id in gpib_connections:
-        gpib_connection = gpib_connections[session_id]
-        try:
-            # Create a controller instance
-            ctrl = controller(
-                conn=gpib_connection,
-                DC_V=session["settings"]["DC_V"],
-                Start_V=session["settings"]["Start_V"],
-                Stop_V=session["settings"]["Stop_V"],
-                Step_V=session["settings"]["Step_V"],
-                Hold_T=session["settings"]["Hold_T"],
-                Step_T=session["settings"]["Step_T"]
-            )
+    session_id = session['email']
+    try:
+        # Remove existing controller instance if it exists
+        if session_id in gpib_connections:
+            # Try to disconnect the current connection
+            old_ctrl = gpib_connections[session_id]
+            if hasattr(old_ctrl.conn, "disconnect"):
+                old_ctrl.conn.disconnect()
+            del gpib_connections[session_id]
 
-            # Use the controller's clear function
-            ctrl.clear()
-            flash("Connection reset successfully!", "success")
-        except Exception as e:
-            flash(f"Error resetting connection: {str(e)}", "error")
-    else:
-        flash("No active connection found to reset.", "error")
+        # Reinitialize the controller with a fresh connection
+        ctrl = get_controller()
+
+        flash("Connection reset and re-established successfully!", "success")
+    except Exception as e:
+        flash(f"Error during reset: {str(e)}", "error")
 
     return redirect(request.referrer or url_for("home"))
 
@@ -611,6 +594,39 @@ def delete_measurement(measurement_id):
 
     conn.close()
     return redirect(url_for("history"))
+
+@app.route('/admin_measure', methods=["GET"])
+def admin_measure():
+    """Admin page to view all measurements."""
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
+
+    # Get the user information
+    user = get_user_by_email(session['email'])
+    if not user:
+        flash("User not found. Please log in again.", "error")
+        return redirect(url_for("login"))
+
+    # Ensure the user is an admin
+    if user[5] == 0:  # Check the `is_admin` value
+        flash("You do not have permission to access this page.", "error")
+        return redirect(url_for("home"))
+
+    # Fetch all measurements from the database
+    conn = sqlite3.connect(DB_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT m.measurement_id, m.date_recorded, m.time_recorded, u.first_name || ' ' || u.last_name AS full_name, m.test_type
+        FROM measurements m
+        JOIN users u ON m.user_id = u.id
+        ORDER BY m.date_recorded DESC, m.time_recorded DESC
+    ''')
+    measurements = cursor.fetchall()
+    conn.close()
+
+    return render_template("admin_measure.html", measurements=measurements)
 
 # USER PAGES ################################################################################################################################################
 @app.route('/documentation', methods=["GET", "POST"])

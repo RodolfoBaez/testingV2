@@ -144,25 +144,11 @@
                             <option value="dc">DC</option>
                             <option value="single">Single</option>
                             <option value="double">Double</option>
-                            <option value="pulse">Pulsed</option>
                         </select>
                         <button type="submit" class="btn btn-outline-primary">Apply</button>
                     </div>
                 </form>
 
-                <form method="POST" class="measurement-form space-y-2">
-                    <input type="hidden" name="action" value="set_bias_level">
-                    <label for="bias_level" class="block text-sm text-gray-600">Bias Level (V)</label>
-                    <div class="flex space-x-2">
-                        <select name="bias_level" id="bias_level" class="persist-select flex-grow px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="0">0</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                        </select>
-                        <button type="submit" class="btn btn-outline-primary">Apply</button>
-                    </div>
-                </form>
             </div>
             
             <div class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-500">
