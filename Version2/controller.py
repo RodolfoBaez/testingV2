@@ -479,7 +479,8 @@ class controller:
     def pulse_sweep(self):
         if self.conn.inst is not None:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            filename = f"data_{timestamp}.csv"
+            filename = f"pulse_data_{timestamp}.csv"
+            file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', filename)
             try:
                 current_end = self.Step_V
                 actual_end = self.Stop_V
@@ -502,6 +503,7 @@ class controller:
                     self.conn.inst.timeout = 10000
                     print("Pulse complete\n")
                     current_end += self.Step_V
+                return filename
 
             except pyvisa.errors.VisaIOError as e:
                 error_code = e.error_code

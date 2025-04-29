@@ -224,7 +224,21 @@ def parameter():
             elif action == "start_pulse_sweep":
                 # Perform pulse sweep measurement
                     csv_file_name = ctrl.pulse_sweep()
-                    flash("Pulse Sweep Measurement completed! Data saved successfully.", "success")
+                    if csv_file_name:
+                        # Construct the full file path
+                        csv_file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', csv_file_name)
+                        
+                        # Add the measurement to the database
+                        user = get_user_by_email(session['email'])
+                        add_measurement(
+                            user_id=user[0],  # Assuming user[0] is the user ID
+                            test_type="Pulse Measurement",
+                            csv_file_path=csv_file_path
+                        )
+                        flash("Pulse Sweep Measurement completed! Data saved to CSV and database.", "success")
+                    else:
+                        flash("Pulse Sweep Measurement failed. No data received.", "error")
+
             elif action == "start_measurement":
                 # Get the measurement type
                 measurement_type = request.form.get("measurement_type")
