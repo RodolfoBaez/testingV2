@@ -13,13 +13,57 @@
     <div id="table" class="mt-4" style="max-width: 800px; width: 100%; overflow-x: auto;"></div>
 
     <a href="{{ url_for('history') }}" class="btn btn-secondary mt-3">Back to History</a>
+    <a href="{{ url_for('serve_uploads', filename=graph_settings['csv_file_path'].split('/')[-1]) }}" target="_blank" class="btn btn-primary mt-3">Download CSV</a>
 </div>
 
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 <script>
-    // Automatically load the CSV file from the server
-    const csvFilePath = "{{ graph_settings.csv_file_path | safe }}";
+    // Get the CSV file path from Flask
+    const csvFilePath = "{{ url_for('serve_uploads', filename=graph_settings['csv_file_name']) }}";
+
+    if (!csvFilePath) {
+        alert("CSV file path is missing. Please try again.");
+        throw new Error("CSV file path is missing.");
+    }
+
+    console.log("CSV File Path:", csvFilePath);
+
+    function parseCSVData(data) {
+        const capacitances = [];
+        const xValues = [];
+        let xLabel = '';
+        let xRange = null;
+
+        if (data[0][2] && data[0][2].toString().startsWith('V')) {
+            xLabel = 'Voltage (V)';
+            xRange = [-6, 6];
+            data.forEach(row => {
+                if (row.length < 3) return;
+                const capacitance = parseFloat(row[0].replace(/NCM\+/, ''));
+                const voltage = parseFloat(row[2].replace(/V+|"/g, ''));
+                if (!isNaN(capacitance) && !isNaN(voltage)) {
+                    capacitances.push(capacitance);
+                    xValues.push(voltage);
+                }
+            });
+        } else if (data[0][1] && data[0][1].toString().startsWith('T')) {
+            xLabel = 'Time (T)';
+            data.forEach(row => {
+                if (row.length < 2) return;
+                const capacitance = parseFloat(row[0].replace(/NCM\+/, ''));
+                const time = parseFloat(row[1].replace(/T/, '').replace(/E\+0/, '').replace(/"/g, '').trim());
+                if (!isNaN(capacitance) && !isNaN(time)) {
+                    capacitances.push(capacitance);
+                    xValues.push(time);
+                }
+            });
+        } else {
+            throw new Error("Unknown data format");
+        }
+
+        return { capacitances, xValues, xLabel, xRange };
+    }
 
     fetch(csvFilePath)
         .then(response => {
@@ -35,45 +79,16 @@
                 skipEmptyLines: true,
                 complete: function(results) {
                     const data = results.data;
-                    const capacitances = [];
-                    const xValues = [];
-                    let xLabel = '';
-                    let xRange = null;
+                    let parsedData;
 
-                    // Determine if the file contains Voltage (V) or Time (T)
-                    if (data[0][2] && data[0][2].toString().startsWith('V')) {
-                        console.log("Detected Voltage (V) data.");
-                        xLabel = 'Voltage (V)';
-                        xRange = [-6, 6]; // Example range for voltage
-                        data.forEach(row => {
-                            if (row.length < 3) return;
-
-                            const capacitance = parseFloat(row[0].replace(/NCM\+/, ''));
-                            const voltage = parseFloat(row[2].replace(/V+|"/g, ''));
-
-                            if (isNaN(capacitance) || isNaN(voltage)) return;
-
-                            capacitances.push(capacitance);
-                            xValues.push(voltage);
-                        });
-                    } else if (data[0][1] && data[0][1].toString().startsWith('T')) {
-                        console.log("Detected Time (T) data.");
-                        xLabel = 'Time (T)';
-                        data.forEach(row => {
-                            if (row.length < 2) return;
-
-                            const capacitance = parseFloat(row[0].replace(/NCM\+/, ''));
-                            const time = parseFloat(row[1].replace(/T/, '').replace(/E\+0/, '').replace(/"/g, '').trim());
-
-                            if (isNaN(capacitance) || isNaN(time)) return;
-
-                            capacitances.push(capacitance);
-                            xValues.push(time);
-                        });
-                    } else {
-                        alert("Unknown data format. Exiting...");
+                    try {
+                        parsedData = parseCSVData(data);
+                    } catch (error) {
+                        alert(error.message);
                         return;
                     }
+
+                    const { capacitances, xValues, xLabel, xRange } = parsedData;
 
                     // Plot the graph
                     const trace = {

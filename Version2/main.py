@@ -223,7 +223,7 @@ def parameter():
                 flash("Settings updated successfully!", "success")
             elif action == "start_pulse_sweep":
                 # Perform pulse sweep measurement
-                    ctrl.pulse_sweep()
+                    csv_file_name = ctrl.pulse_sweep()
                     flash("Pulse Sweep Measurement completed! Data saved successfully.", "success")
             elif action == "start_measurement":
                 # Get the measurement type
@@ -234,15 +234,16 @@ def parameter():
                 if measurement_type == "cv":
                     print("Executing C-V measurement...")
                     ctrl.single_config()  # Configure the device for C-V
-                    csv_file_path = ctrl.sweep_measure()  # Start the sweep measurement
+                    csv_file_name = ctrl.sweep_measure()  # Start the sweep measurement
                 elif measurement_type == "ct":
                     print("Executing C-T measurement...")
                     # ctrl.set_ctfunc()  # Configure the device for C-T
                     ctrl.default_CT()  # Set default C-T settings
-                    ctrl.sweep_measure()  # Start the sweep measurement
+                    csv_file_name = ctrl.sweep_measure()  # Start the sweep measurement
                 
                 # Add the measurement to the database if the CSV file was saved
-                if csv_file_path:
+                if csv_file_name:
+                    csv_file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', csv_file_name)
                     user = get_user_by_email(session['email'])
                     add_measurement(
                         user_id=user[0],  # Assuming user[0] is the user ID
@@ -452,17 +453,15 @@ def wizardgraph():
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
-    # Retrieve graph settings and data from the session
-    wizard_graph_settings = session.get("wizard_graph_settings")
-    if not wizard_graph_settings or not wizard_graph_settings.get("data"):
-        flash("No graph settings or data found. Please set up the measurement first.", "error")
-        return redirect(url_for("wizard"))
+    # Example: Retrieve the CSV file path from the database or session
+    csv_file_path = session.get('csv_file_path')  # Or retrieve it from the database
+    if not csv_file_path:
+        flash("CSV file path is missing.", "error")
+        return redirect(url_for('history'))
 
-    # Debugging: Print the graph settings to the console
-    print("Wizard Graph Settings:", wizard_graph_settings)
-
-    # Render the wizard graph page with the settings and data
-    return render_template("wizardgraph.html", graph_settings=wizard_graph_settings)
+    # Pass the file path to the template
+    graph_settings = {'csv_file_path': csv_file_path}
+    return render_template('wizardgraph.html', graph_settings=graph_settings)
 
 @app.route('/reset_connection', methods=["POST"])
 def reset_connection():
@@ -534,18 +533,40 @@ def view_measurement(measurement_id):
         # Convert relative path to absolute path in the HPData folder
         csv_file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', csv_file_path)
 
-    if not os.path.exists(csv_file_path):
-        flash("CSV file not found. Unable to load graph data.", "error")
+    if not os.path.isfile(csv_file_path):
+        flash("CSV file not found or is not a valid file.", "error")
         return redirect(url_for("history"))
 
-    # Debugging: Print the resolved file path
-    print(f"Resolved CSV file path: {csv_file_path}")
+    # Extract only the file name to pass to the template
+    csv_file_name = os.path.basename(csv_file_path)
 
-    # Generate the URL for the CSV file
-    csv_url = url_for('serve_uploads', filename=os.path.basename(csv_file_path))
+    # Read the CSV file
+    csv_data = []
+    try:
+        with open(csv_file_path, 'r') as csvfile:
+            reader = csv.reader(csvfile)
+            headers = next(reader)  # Get the headers (first row)
+            csv_data = [row for row in reader]  # Read the remaining rows
+    except Exception as e:
+        flash(f"Error reading CSV file: {str(e)}", "error")
+        return redirect(url_for("history"))
 
-    # Pass the measurement data and CSV file URL to the wizard graph template
-    return render_template("wizardgraph.html", graph_settings={"measurement": measurement, "csv_file_path": csv_url})
+    # Convert CSV data to JSON format for the frontend
+    graph_data = {
+        "headers": headers,
+        "rows": csv_data
+    }
+
+    # Pass the measurement data and graph data to the template
+    return render_template(
+        "wizardgraph.html",
+        graph_settings={
+            "csv_file_name": csv_file_name,  # Pass only the file name
+            "csv_file_path": csv_file_path,  # Pass the full file path for download
+            "measurement": measurement,
+            "graph_data": graph_data
+        }
+    )
 
 @app.route('/delete_measurement/<int:measurement_id>', methods=["POST"])
 def delete_measurement(measurement_id):
