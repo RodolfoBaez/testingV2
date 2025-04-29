@@ -33,7 +33,6 @@ def init_db():
             user_id INTEGER NOT NULL,
             test_type TEXT NOT NULL,
             csv_file_path TEXT,
-            file_path TEXT,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
@@ -48,15 +47,15 @@ def init_db():
         cursor.execute('''
             INSERT INTO users (first_name, last_name, email, password, is_admin)
             VALUES (?, ?, ?, ?, ?)
-        ''', ("Admin", "User", "admin@example.com", hashed_password, 1))
-        print("Admin user created with email: admin@example.com and password: Welcome1")
+        ''', ("Admin", "User", "admin@hp4280a.com", hashed_password, 1))
+        print("Admin user created with email: admin@hp4280a.com and password: Welcome1")
 
         # Add a demo user with simple credentials
         cursor.execute('''
             INSERT INTO users (first_name, last_name, email, password, is_admin)
             VALUES (?, ?, ?, ?, ?)
-        ''', ("Demo", "User", "demo@example.com", "demo", 0))
-        print("Demo user created with email: demo@example.com and password: demo")
+        ''', ("Demo", "User", "demo@hp4280a.com", "demo", 0))
+        print("Demo user created with email: demo@hp4280a.com and password: demo")
 
     conn.commit()
     conn.close()

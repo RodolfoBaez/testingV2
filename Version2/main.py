@@ -97,7 +97,7 @@ def get_controller():
         if not user:
             raise Exception("User not found.")
 
-        if user[3] == "demo@example.com":
+        if user[3] == "demo@hp4280a.com":
             gpib_connection = SimulatedVisaCon()
         else:
             gpib_connection = VisaCon()
@@ -199,7 +199,13 @@ def parameter():
                     "Stop_V": float(request.form['Stop_V']),
                     "Step_V": float(request.form['Step_V']),
                     "Hold_T": float(request.form['Hold_T']),
-                    "Step_T": float(request.form['Step_T'])
+                    "Step_T": float(request.form['Step_T']),
+
+                    "Pulse": float(request.form['Pulse']),
+                    "Meas": float(request.form['Meas']),
+                    "Nofread": float(request.form['Nofread']),
+                    "Pulse_Width": float(request.form['Pulse_Width']),
+                    "Meas_Interval": float(request.form['Meas_Interval'])
                 })
                 # Update controller settings
                 ctrl.set_DCV(session["settings"]["DC_V"])
@@ -208,12 +214,13 @@ def parameter():
                 ctrl.set_StepV(session["settings"]["Step_V"])
                 ctrl.set_Hold_Time(session["settings"]["Hold_T"])
                 ctrl.set_StepT(session["settings"]["Step_T"])
+                # CT Settings
+                ctrl.set_Pulse(session["settings"]["Pulse"])
+                ctrl.set_Measure_pulse(session["settings"]["Meas"])
+                ctrl.set_NOFREAD(session["settings"]["Nofread"])
+                ctrl.set_th(session["settings"]["Pulse_Width"])
+                ctrl.set_td(session["settings"]["Meas_Interval"])
                 flash("Settings updated successfully!", "success")
-                ctrl.set_td(2) # Set the delay time to 2 seconds
-                ctrl.set_th(2) # Set the hold time to 2 seconds
-                ctrl.set_Measure_pulse(0.10) # Set the measure pulse to 0.10 seconds
-                ctrl.set_Pulse(3) # Set the number of pulses to 3
-                ctrl.set_NOFREAD(10) # Set the number of reads to 10
             elif action == "start_pulse_sweep":
                 # Perform pulse sweep measurement
                     ctrl.pulse_sweep()
@@ -221,52 +228,31 @@ def parameter():
             elif action == "start_measurement":
                 # Get the measurement type
                 measurement_type = request.form.get("measurement_type")
+                print(f"Measurement type selected: {measurement_type}")  # Debugging log
 
                 # Perform measurement and save to CSV
                 if measurement_type == "cv":
-                    ctrl.single_config()
-                    ctrl.sweep_measure()
-                    """data = ctrl.read_data()
-                    if data:
-                        # Save data to CSV
-                        csv_file_path = ctrl.mkcsv(data, filename="measurement_data.csv")  # Get the full path
-
-                        # Add the measurement to the database
-                        user = get_user_by_email(session['email'])
-                        measurement_id = add_measurement(
-                            user_id=user[0],
-                            test_type="C-V Measurement",
-                            csv_file_path=csv_file_path,  # Store the full path
-                            file_path=os.path.abspath(csv_file_path)  # Store the absolute path
-                        )
-                        flash("C-V Measurement completed! Data saved successfully.", "success")
-                        return redirect(url_for('view_measurement', measurement_id=measurement_id))  # Redirect to view measurement
-                    else:
-                        flash("No data received during C-V measurement.", "error")"""
+                    print("Executing C-V measurement...")
+                    ctrl.single_config()  # Configure the device for C-V
+                    csv_file_path = ctrl.sweep_measure()  # Start the sweep measurement
                 elif measurement_type == "ct":
-                    ctrl.set_ctfunc()
-                    ctrl.default_CT()
+                    print("Executing C-T measurement...")
+                    # ctrl.set_ctfunc()  # Configure the device for C-T
+                    ctrl.default_CT()  # Set default C-T settings
+                    ctrl.sweep_measure()  # Start the sweep measurement
+                
+                # Add the measurement to the database if the CSV file was saved
+                if csv_file_path:
+                    user = get_user_by_email(session['email'])
+                    add_measurement(
+                        user_id=user[0],  # Assuming user[0] is the user ID
+                        test_type=measurement_type.upper() + " Measurement",
+                        csv_file_path=csv_file_path
+                    )
+                    flash("Measurement completed successfully! Data saved to CSV and database.", "success")
+                else:
+                    flash("Measurement failed. No data received.", "error")
                     
-                    ctrl.sweep_measure()
-                    data = ctrl.read_data()
-                    if data:
-                        # Save data to CSV
-                        csv_file_path = "measurement_data_ct.csv"  # Define the CSV file path
-                        ctrl.mkcsv(data, filename=csv_file_path)
-
-                        # Add the measurement to the database
-                        user = get_user_by_email(session['email'])
-                        measurement_id = add_measurement(
-                            user_id=user[0],
-                            test_type="C-T Measurement",
-                            csv_file_path=csv_file_path,
-                            file_path=os.path.abspath(csv_file_path)
-                        )
-                        flash("C-T Measurement completed! Data saved successfully.", "success")
-                        return redirect(url_for('view_measurement', measurement_id=measurement_id))  # Redirect to view measurement
-                    else:
-                        flash("No data received during C-T measurement.", "error")
-
         connection_status, terminal_output = check_connection_status()
         return render_template("parameter.html", connection_status=connection_status, terminal_output=terminal_output, settings=session["settings"])
 
@@ -542,15 +528,18 @@ def view_measurement(measurement_id):
         flash("Measurement not found.", "error")
         return redirect(url_for("history"))
 
-    # Verify that the CSV file exists
+    # Verify that the CSV file exists in the HPData folder
     csv_file_path = measurement[5]
     if not os.path.isabs(csv_file_path):
-        # Convert relative path to absolute path
-        csv_file_path = os.path.join(os.path.dirname(__file__), "uploads", csv_file_path)
+        # Convert relative path to absolute path in the HPData folder
+        csv_file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', csv_file_path)
 
     if not os.path.exists(csv_file_path):
         flash("CSV file not found. Unable to load graph data.", "error")
         return redirect(url_for("history"))
+
+    # Debugging: Print the resolved file path
+    print(f"Resolved CSV file path: {csv_file_path}")
 
     # Generate the URL for the CSV file
     csv_url = url_for('serve_uploads', filename=os.path.basename(csv_file_path))
@@ -673,7 +662,7 @@ def documentation():
     # Fetch all users except the demo user
     conn = sqlite3.connect(DB_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT first_name, last_name, email, id, is_admin FROM users WHERE email != 'demo@example.com'")
+    cursor.execute("SELECT first_name, last_name, email, id, is_admin FROM users WHERE email != 'demo@hp4280a.com'")
     users = cursor.fetchall()
     conn.close()
 
@@ -769,7 +758,7 @@ def settings():
         return redirect(url_for("login"))
 
     # Prevent the demo user from accessing the settings page
-    if session['email'] == "demo@example.com":
+    if session['email'] == "demo@hp4280a.com":
         flash("Demo user cannot access the settings page.", "error")
         return redirect(url_for("home"))
 
@@ -814,12 +803,12 @@ def settings():
 
 # NON PAGES ####################################################################################################################################################
 @app.route('/uploads/<path:filename>')
+def serve_uploads(filename):
+    # Update the path to point to the Documents/HPData folder
+    hp_data_folder = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData')
+    return send_from_directory(hp_data_folder, filename)
 
 # LAUNCHING THE APP #######################################################################################################################################
-def serve_uploads(filename):
-    uploads_folder = os.path.join(os.path.dirname(__file__), 'uploads')
-    return send_from_directory(uploads_folder, filename)
-
 if __name__ == '__main__':
     # Create a WebView window
     #webview.create_window('HP 4280A Controller', app)  # Pass the Flask app to the WebView window

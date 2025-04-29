@@ -424,12 +424,14 @@ class controller:
             response = self.ReadBlockResponseAscii()
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             filename = f"data_{timestamp}.csv"
+            file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData')
             if response is not None:
                 print("Data Received: ", response)
                 self.mkcsv(response, filename)
                 self.command("SW0")
                 self.conn.inst.timeout = 10000
                 print("Sweep Stopped")
+                return file_path
             else:
                 print("No data received")
         else:

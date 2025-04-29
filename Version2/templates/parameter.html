@@ -12,6 +12,16 @@
 
 <!-- Parameter Settings Form -->
 <form action="/parameter" method="post" class="p-4 border rounded shadow-sm bg-white mb-5">
+    <!-- Measurement Type Selector -->
+    <div class="mb-3">
+        <label for="measurement_type" class="form-label">Measurement Type:</label>
+        <select class="form-select" id="measurement_type" name="measurement_type" required>
+            <option value="cv" selected>C-V Measurement</option>
+            <option value="ct">C-T Measurement</option>
+        </select>
+    </div>
+
+    <!-- C-V Measurement Fields -->
     <div id="cv_settings">
         <div class="mb-3">
             <label for="DC_V" class="form-label">DC Voltage (DC_V):</label>
@@ -37,45 +47,38 @@
             <label for="Step_T" class="form-label">Step Time (Step_T):</label>
             <input type="number" step="0.01" class="form-control" id="Step_T" name="Step_T" value="{{ settings.Step_T }}" required>
         </div>
+        <div class="mb-3 text-center">
+            <button type="submit" name="action" value="start_pulse_sweep" class="btn btn-outline-warning" id="pulse_sweep_button">Start Pulse Sweep</button>
+        </div>
     </div>
 
     <!-- C-T Measurement Fields -->
     <div id="ct_settings" style="display: none;">
         <div class="mb-3">
-            <label for="pulse" class="form-label">Pulse (V):</label>
-            <input type="number" step="0.01" class="form-control" id="pulse" name="pulse" value="0">
+            <label for="Pulse" class="form-label">Pulse (V):</label>
+            <input type="number" step="0.01" class="form-control" id="Pulse" name="Pulse" value="0">
         </div>
         <div class="mb-3">
-            <label for="meas" class="form-label">MEAS:</label>
-            <input type="number" step="0.01" class="form-control" id="meas" name="meas" value="0">
+            <label for="Meas" class="form-label">MEAS:</label>
+            <input type="number" step="0.01" class="form-control" id="Meas" name="Meas" value="0">
         </div>
         <div class="mb-3">
-            <label for="nofread" class="form-label">NO OFREAD:</label>
-            <input type="number" step="1" class="form-control" id="nofread" name="nofread" value="10">
+            <label for="Nofread" class="form-label"># OF READING:</label>
+            <input type="number" step="1" class="form-control" id="Nofread" name="Nofread" value="10">
         </div>
         <div class="mb-3">
-            <label for="pulse_width" class="form-label">Pulse Width (s):</label>
-            <input type="number" step="0.01" class="form-control" id="pulse_width" name="pulse_width" value="1">
+            <label for="Pulse_Width" class="form-label">Pulse Width (s):</label>
+            <input type="number" step="0.01" class="form-control" id="Pulse_Width" name="Pulse_Width" value="1">
         </div>
         <div class="mb-3">
-            <label for="meas_interval" class="form-label">MEAS Interval (s):</label>
-            <input type="number" step="0.01" class="form-control" id="meas_interval" name="meas_interval" value="0.1">
+            <label for="Meas_Interval" class="form-label">MEAS Interval (s):</label>
+            <input type="number" step="0.01" class="form-control" id="Meas_Interval" name="Meas_Interval" value="0.1">
         </div>
-    </div>
-
-    <!-- Measurement Type Selector -->
-    <div class="mb-3">
-        <label for="measurement_type" class="form-label">Measurement Type:</label>
-        <select class="form-select" id="measurement_type" name="measurement_type" required>
-            <option value="cv" selected>C-V Measurement</option>
-            <option value="ct">C-T Measurement</option>
-        </select>
     </div>
 
     <!-- Action Buttons -->
     <div class="d-flex justify-content-between">
         <button type="submit" name="action" value="update_settings" class="btn btn-outline-primary">Update Settings</button>
-        <button type="submit" name="action" value="start_pulse_sweep" class="btn btn-outline-warning">Start Pulse Sweep</button>
         <button type="submit" name="action" value="start_measurement" class="btn btn-outline-success">Start Measurement</button>
     </div>
 </form>
