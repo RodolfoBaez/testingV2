@@ -9,3 +9,4 @@ testscript.py
 EasyCV.spec
 /venv/
 unmark
+database.db
