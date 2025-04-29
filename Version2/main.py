@@ -282,8 +282,14 @@ def graph():
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
-    # Render the splice graph page
-    return render_template("graph.html")
+    # Provide default graph_settings if accessed directly
+    graph_settings = {
+        "csv_file_name": "example.csv",  # Replace with a default or example file name
+        "csv_file_path": "",  # No file path available when accessed directly
+        "measurement": None  # No measurement data available
+    }
+
+    return render_template("graph.html", graph_settings=graph_settings)
 
 @app.route('/configuration', methods=["GET", "POST"])
 def configuration():
@@ -450,15 +456,21 @@ def configuration():
         flash(f"Error: {str(e)}", "error")
         return redirect(url_for("home"))
 
-@app.route('/pulse_graph')
+@app.route('/pulse_graph', methods=["GET", "POST"])
 def pulsegraph():
     # Check if the user is logged in
     if 'email' not in session:
         flash("Please log in to access this page.", "error")
         return redirect(url_for("login"))
 
-    # Render the pulse graph page
-    return render_template("pulsegraph.html")
+    # Provide default graph_settings if accessed directly
+    graph_settings = {
+        "csv_file_name": "example.csv",  # Replace with a default or example file name
+        "csv_file_path": "",  # No file path available when accessed directly
+        "measurement": None  # No measurement data available
+    }
+
+    return render_template("pulsegraph.html", graph_settings=graph_settings)
 
 @app.route('/wizardgraph')
 def wizardgraph():
@@ -554,33 +566,26 @@ def view_measurement(measurement_id):
     # Extract only the file name to pass to the template
     csv_file_name = os.path.basename(csv_file_path)
 
-    # Read the CSV file
-    csv_data = []
-    try:
-        with open(csv_file_path, 'r') as csvfile:
-            reader = csv.reader(csvfile)
-            headers = next(reader)  # Get the headers (first row)
-            csv_data = [row for row in reader]  # Read the remaining rows
-    except Exception as e:
-        flash(f"Error reading CSV file: {str(e)}", "error")
-        return redirect(url_for("history"))
-
-    # Convert CSV data to JSON format for the frontend
-    graph_data = {
-        "headers": headers,
-        "rows": csv_data
-    }
-
-    # Pass the measurement data and graph data to the template
-    return render_template(
-        "wizardgraph.html",
-        graph_settings={
-            "csv_file_name": csv_file_name,  # Pass only the file name
-            "csv_file_path": csv_file_path,  # Pass the full file path for download
-            "measurement": measurement,
-            "graph_data": graph_data
-        }
-    )
+    # Determine the type of measurement and render the appropriate template
+    if measurement[4] == "Pulse Measurement":  # Check if the test_type is "Pulse Measurement"
+        return render_template(
+            "pulsegraph.html",
+            graph_settings={
+                "csv_file_name": csv_file_name,  # Pass only the file name
+                "csv_file_path": csv_file_path,  # Pass the full file path for download
+                "measurement": measurement
+            }
+        )
+    else:
+        # For other measurement types, render the graph.html template
+        return render_template(
+            "graph.html",
+            graph_settings={
+                "csv_file_name": csv_file_name,  # Pass only the file name
+                "csv_file_path": csv_file_path,  # Pass the full file path for download
+                "measurement": measurement
+            }
+        )
 
 @app.route('/delete_measurement/<int:measurement_id>', methods=["POST"])
 def delete_measurement(measurement_id):
