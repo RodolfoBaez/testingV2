@@ -215,11 +215,11 @@ def parameter():
                 ctrl.set_Hold_Time(session["settings"]["Hold_T"])
                 ctrl.set_StepT(session["settings"]["Step_T"])
                 # CT Settings
-                ctrl.set_Pulse(session["settings"]["Pulse"])
-                ctrl.set_Measure_pulse(session["settings"]["Meas"])
-                ctrl.set_NOFREAD(session["settings"]["Nofread"])
-                ctrl.set_th(session["settings"]["Pulse_Width"])
-                ctrl.set_td(session["settings"]["Meas_Interval"])
+                ctrl.set_Pulse(session["settings"]["Pulse"]) #voltage value
+                ctrl.set_Measure_pulse(session["settings"]["Meas"]) #voltage value
+                ctrl.set_NOFREAD(session["settings"]["Nofread"]) #whole number
+                ctrl.set_th(session["settings"]["Pulse_Width"]) #hold time (CANNOT BE DECIMAL LESS THAN 1)
+                ctrl.set_td(session["settings"]["Meas_Interval"]) #delay time (CANNOT BE DECIMAL LESS THAN 1)
                 flash("Settings updated successfully!", "success")
             elif action == "start_pulse_sweep":
                 # Perform pulse sweep measurement
@@ -252,7 +252,7 @@ def parameter():
                 elif measurement_type == "ct":
                     print("Executing C-T measurement...")
                     # ctrl.set_ctfunc()  # Configure the device for C-T
-                    ctrl.default_CT()  # Set default C-T settings
+                    #ctrl.default_CT()  # Set default C-T settings
                     csv_file_name = ctrl.sweep_measure()  # Start the sweep measurement
                 
                 # Add the measurement to the database if the CSV file was saved
