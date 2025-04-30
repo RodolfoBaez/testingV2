@@ -83,7 +83,7 @@
     {% if email %}
     <nav class="navbar navbar-expand-lg navbar-light">
         <div class="container-fluid">
-            {% if email == "demo@example.com" %}
+            {% if email == "demo@hp4280a.com" %}
                 <span class="navbar-brand text-danger fw-bold">DEMO MODE</span>
             {% else %}
                 <a class="navbar-brand" href="/contributions">HP4280A Controller</a>
@@ -115,7 +115,7 @@
                           </a>
                           <div class="dropdown-menu" aria-labelledby="navbarDropdown">
 
-                            {% if email != "demo@example.com" %}
+                            {% if email != "demo@hp4280a.com" %}
                                 <a class="dropdown-item" href="{{ url_for('settings') }}">Settings</a>
                             {% else %}
                                 <a class="dropdown-item disabled" href="#" tabindex="-1" aria-disabled="true">Settings</a>
