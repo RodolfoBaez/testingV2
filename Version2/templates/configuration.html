@@ -162,18 +162,23 @@
     </div>
     
     <script>
-        // Function to auto-submit the mode form when selection changes
+        // Modified autoApplyMode function to store the measurement type mapping
         function autoApplyMode(selectElement) {
-            // Save the selected value to localStorage
-            localStorage.setItem('mode', selectElement.value);
-            
-            // Update the UI immediately
-            updateMeasurementMode();
-            
-            // Submit the form
-            document.getElementById('mode-form').submit();
-        }
-        
+        // Store the measurement mode (cgt or ct)
+        localStorage.setItem('mode', selectElement.value);
+    
+        // Also store the equivalent measurement_type value for parameter page (cv or ct)
+        // Map cgt -> cv and ct -> ct for parameter page compatibility
+        const parameterTypeValue = selectElement.value === 'cgt' ? 'cv' : 'ct';
+        localStorage.setItem('measurement_type', parameterTypeValue);
+    
+        // Update the UI immediately
+        updateMeasurementMode();
+    
+        // Submit the form
+        document.getElementById('mode-form').submit();
+    }
+
         // Helper to save selection to localStorage when form is submitted
         document.querySelectorAll('.measurement-form').forEach(form => {
             form.addEventListener('submit', function(e) {
