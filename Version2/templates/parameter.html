@@ -88,6 +88,11 @@
 </div>
 
 <script>
+    // Call this function when the parameter page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        restrictMeasurementType();
+    });
+    
     // Show/Hide Settings Based on Measurement Type
     const measurementType = document.getElementById("measurement_type");
     const cvSettings = document.getElementById("cv_settings");
@@ -102,6 +107,36 @@
             ctSettings.style.display = "none";
         }
     });
+
+    // Function to restrict measurement type based on configuration selection
+    function restrictMeasurementType() {
+    const measurementTypeSelect = document.getElementById('measurement_type');
+    const savedType = localStorage.getItem('measurement_type');
+    
+    // If there's a saved type from the config page
+    if (savedType) {
+        // Set the value
+        measurementTypeSelect.value = savedType;
+        
+        // Disable changing the selection
+        measurementTypeSelect.disabled = true;
+        
+        // Add a note that this was set from configuration
+        const noteElement = document.createElement('small');
+        noteElement.className = 'form-text text-muted';
+        noteElement.textContent = 'This measurement type was set from the configuration page.';
+        measurementTypeSelect.parentNode.appendChild(noteElement);
+        
+        // Also trigger the display logic immediately
+        if (savedType === 'ct') {
+            document.getElementById('cv_settings').style.display = 'none';
+            document.getElementById('ct_settings').style.display = 'block';
+        } else {
+            document.getElementById('cv_settings').style.display = 'block';
+            document.getElementById('ct_settings').style.display = 'none';
+        }
+    }
+}
 
     // Initialize the correct settings on page load
     document.addEventListener("DOMContentLoaded", function () {
