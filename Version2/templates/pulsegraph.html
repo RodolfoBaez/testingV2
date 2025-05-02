@@ -20,114 +20,136 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 <script>
-    // Get the CSV file path from Flask
-    const csvFilePath = "{{ url_for('serve_uploads', filename=graph_settings['csv_file_name']) }}";
+    // Function to parse and render the CSV data
+    function parseAndRenderCSV(csvText) {
+        Papa.parse(csvText, {
+            header: false,
+            dynamicTyping: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                const data = results.data;
+                const pulseValues = [];
+                const xValues = [];
+                let xLabel = '';
+                let xRange = null;
 
-    if (!csvFilePath) {
-        alert("CSV file path is missing. Please try again.");
-        throw new Error("CSV file path is missing.");
+                // Determine if the file contains Voltage (V) or Time (T)
+                if (data[0][2] && data[0][2].toString().startsWith('V')) {
+                    console.log("Detected Voltage (V) data.");
+                    xLabel = 'Voltage (V)';
+                    xRange = [-6, 6]; // Example range for voltage
+                    data.forEach(row => {
+                        if (row.length < 3) return;
+
+                        const pulse = parseFloat(row[0].replace(/NCM\+/, ''));
+                        const voltage = parseFloat(row[2].replace(/V+|"/g, ''));
+
+                        if (isNaN(pulse) || isNaN(voltage)) return;
+
+                        pulseValues.push(pulse);
+                        xValues.push(voltage);
+                    });
+                } else if (data[0][1] && data[0][1].toString().startsWith('T')) {
+                    console.log("Detected Time (T) data.");
+                    xLabel = 'Time (T)';
+                    data.forEach(row => {
+                        if (row.length < 2) return;
+
+                        const pulse = parseFloat(row[0].replace(/NCM\+/, ''));
+                        const time = parseFloat(row[1].replace(/T/, '').replace(/E\+0/, '').replace(/"/g, '').trim());
+
+                        if (isNaN(pulse) || isNaN(time)) return;
+
+                        pulseValues.push(pulse);
+                        xValues.push(time);
+                    });
+                } else {
+                    alert("Unknown data format. Exiting...");
+                    return;
+                }
+
+                // Plot the pulse graph
+                const trace = {
+                    x: xValues,
+                    y: pulseValues,
+                    mode: 'lines+markers',
+                    type: 'scatter',
+                    line: { shape: 'hv' }, // Stepped line for pulse graph
+                };
+
+                const layout = {
+                    title: {
+                        text: `Pulse vs. ${xLabel}`,
+                        x: 0, // Position at the left
+                        y: 1.05, // Slightly above the graph
+                        xanchor: 'left', // Align to the left
+                        yanchor: 'bottom', // Align to the top
+                    },
+                    xaxis: { title: xLabel, range: xRange },
+                    yaxis: { title: 'Pulse (Amplitude)' },
+                    margin: { t: 50, b: 50, l: 50, r: 50 },
+                    plot_bgcolor: '#f9f9f9', // Light background for the plot
+                };
+
+                Plotly.newPlot('plot', [trace], layout);
+
+                // Create the table
+                let tableHtml = `<table class="table table-striped table-sm"><thead><tr><th>${xLabel}</th><th>Pulse (Amplitude)</th></tr></thead><tbody>`;
+                for (let i = 0; i < pulseValues.length; i++) {
+                    tableHtml += `<tr><td>${xValues[i]}</td><td>${pulseValues[i]}</td></tr>`;
+                }
+                tableHtml += '</tbody></table>';
+                document.getElementById('table').innerHTML = tableHtml;
+            }
+        });
     }
 
-    console.log("CSV File Path:", csvFilePath);
+    // Check if the CSV file path is provided by the server
+    const csvFilePath = "{{ url_for('serve_uploads', filename=graph_settings['csv_file_name']) if graph_settings['csv_file_name'] else '' }}";
 
-    // Fetch and parse the CSV file
-    fetch(csvFilePath)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error("Failed to load CSV file.");
-            }
-            return response.text();
-        })
-        .then(csvText => {
-            Papa.parse(csvText, {
-                header: false,
-                dynamicTyping: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    const data = results.data;
-                    const pulseValues = [];
-                    const xValues = [];
-                    let xLabel = '';
-                    let xRange = null;
-
-                    // Determine if the file contains Voltage (V) or Time (T)
-                    if (data[0][2] && data[0][2].toString().startsWith('V')) {
-                        console.log("Detected Voltage (V) data.");
-                        xLabel = 'Voltage (V)';
-                        xRange = [-6, 6]; // Example range for voltage
-                        data.forEach(row => {
-                            if (row.length < 3) return;
-
-                            const pulse = parseFloat(row[0].replace(/NCM\+/, ''));
-                            const voltage = parseFloat(row[2].replace(/V+|"/g, ''));
-
-                            if (isNaN(pulse) || isNaN(voltage)) return;
-
-                            pulseValues.push(pulse);
-                            xValues.push(voltage);
-                        });
-                    } else if (data[0][1] && data[0][1].toString().startsWith('T')) {
-                        console.log("Detected Time (T) data.");
-                        xLabel = 'Time (T)';
-                        data.forEach(row => {
-                            if (row.length < 2) return;
-
-                            const pulse = parseFloat(row[0].replace(/NCM\+/, ''));
-                            const time = parseFloat(row[1].replace(/T/, '').replace(/E\+0/, '').replace(/"/g, '').trim());
-
-                            if (isNaN(pulse) || isNaN(time)) return;
-
-                            pulseValues.push(pulse);
-                            xValues.push(time);
-                        });
-                    } else {
-                        alert("Unknown data format. Exiting...");
-                        return;
-                    }
-
-                    // Plot the pulse graph
-                    const trace = {
-                        x: xValues,
-                        y: pulseValues,
-                        mode: 'lines+markers',
-                        type: 'scatter',
-                        line: { shape: 'hv' }, // Stepped line for pulse graph
-                    };
-
-                    const layout = {
-                        title: {
-                            text: `Pulse vs. ${xLabel}`,
-                            x: 0, // Position at the left
-                            y: 1.05, // Slightly above the graph
-                            xanchor: 'left', // Align to the left
-                            yanchor: 'bottom', // Align to the top
-                        },
-                        xaxis: { title: xLabel, range: xRange },
-                        yaxis: { title: 'Pulse (Amplitude)' },
-                        margin: { t: 50, b: 50, l: 50, r: 50 },
-                        plot_bgcolor: '#f9f9f9', // Light background for the plot
-                    };
-
-                    Plotly.newPlot('plot', [trace], layout);
-
-                    // Create the table
-                    let tableHtml = `<table class="table table-striped table-sm"><thead><tr><th>${xLabel}</th><th>Pulse (Amplitude)</th></tr></thead><tbody>`;
-                    for (let i = 0; i < pulseValues.length; i++) {
-                        tableHtml += `<tr><td>${xValues[i]}</td><td>${pulseValues[i]}</td></tr>`;
-                    }
-                    tableHtml += '</tbody></table>';
-                    document.getElementById('table').innerHTML = tableHtml;
+    if (csvFilePath) {
+        // Fetch and parse the CSV file from the server
+        fetch(csvFilePath)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to load CSV file.");
                 }
+                return response.text();
+            })
+            .then(csvText => {
+                parseAndRenderCSV(csvText);
+            })
+            .catch(error => {
+                console.error(error);
+                document.getElementById('plot').innerHTML = '<p>No data loaded. Please upload a CSV file.</p>';
+                document.getElementById('table').innerHTML = '';
             });
-        })
-        .catch(error => {
-            console.error(error);
-            alert("Failed to load the graph data.");
-        });
+    } else {
+        // Display a placeholder message if no server-provided file is available
+        document.getElementById('plot').innerHTML = '<p>No data loaded. Please upload a CSV file.</p>';
+        document.getElementById('table').innerHTML = '';
+    }
+
+    // Handle file input for manual upload
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            alert("No file selected. Please choose a CSV file.");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const csvText = e.target.result;
+            parseAndRenderCSV(csvText);
+        };
+        reader.readAsText(file);
+    });
 
     // Clear data button functionality
     document.getElementById('clearButton').addEventListener('click', function() {
         Plotly.purge('plot'); // Clear the graph
+        document.getElementById('plot').innerHTML = '<p>No data loaded. Please upload a CSV file.</p>'; // Reset placeholder
         document.getElementById('table').innerHTML = ''; // Clear the table
     });
 </script>

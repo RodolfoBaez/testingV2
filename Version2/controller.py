@@ -476,35 +476,76 @@ class controller:
 """
     def pulse_sweep(self):
         if self.conn.inst is not None:
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            filename = f"pulse_data_{timestamp}.csv"
+            file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', filename)
+
+            # Ensure Step_V is not zero
+            if self.Step_V == 0:
+                print("Step_V cannot be 0. Exiting pulse_sweep.")
+                return
+
             try:
-                temp1 = self.Stop_V
-                temp2 = self.Step_V
-                temp3 = self.Start_V
-                current_end = self.Step_V
+                current_voltage = 0  # Start at 0 volts
                 actual_end = self.Stop_V
-                while current_end < actual_end+self.Step_V:  
-                    temp = self.Start_V
-                    self.set_StopV(self.Stop_V)
-                    self.set_StepV(temp)
+                seen_voltages = set()  # Track seen voltages to avoid duplicates
+
+                while current_voltage <= actual_end:
+                    # Step 1: Set voltage to 0
+                    self.set_StartV(0)
+                    self.set_StopV(0)
                     self.command("SW1")
-                    #time.sleep(self.sweep_time_calc())
+                    self.conn.inst.timeout = 1000000
                     self.command("BL1")
                     self.command("BD")
                     self.command("READ?")
                     response = self.ReadBlockResponseAscii()
                     if response is not None:
-                        print("Data Received: ", response)
-                        self.mkcsv(response)
+                        print("Data Received at 0V: ", response)
+                        if 0 not in seen_voltages:
+                            self.mkcsv(response, filename)
+                            seen_voltages.add(0)
                     else:
-                        print("No data received")
-                    self.set_StartV(temp+temp2)
-                    if temp == temp1:
-                        self.command("SW0")   
-                        break
-                    self.set_StopV(temp1)
-                    self.set_Step(temp2)
-                    self.set_StartV(temp3)        
-                current_end += self.Step_V         
+                        print("No data received at 0V")
+
+                    # Step 2: Increment to the next voltage step
+                    self.set_StartV(0)
+                    self.set_StopV(current_voltage)
+                    self.command("SW1")
+                    self.command("BL1")
+                    self.command("BD")
+                    self.command("READ?")
+                    response = self.ReadBlockResponseAscii()
+                    if response is not None:
+                        print(f"Data Received at {current_voltage}V: ", response)
+                        if current_voltage not in seen_voltages:
+                            self.mkcsv(response, filename)
+                            seen_voltages.add(current_voltage)
+                    else:
+                        print(f"No data received at {current_voltage}V")
+
+                    # Step 3: Return to 0 volts
+                    self.set_StartV(0)
+                    self.set_StopV(0)
+                    self.command("SW1")
+                    self.command("BL1")
+                    self.command("BD")
+                    self.command("READ?")
+                    response = self.ReadBlockResponseAscii()
+                    if response is not None:
+                        print("Data Received at 0V (return): ", response)
+                        if 0 not in seen_voltages:
+                            self.mkcsv(response, filename)
+                            seen_voltages.add(0)
+                    else:
+                        print("No data received at 0V (return)")
+
+                    # Step 4: Increment to the next step
+                    current_voltage += self.Step_V
+
+                print("Pulse sweep complete.")
+                return filename
+
             except pyvisa.errors.VisaIOError as e:
                 error_code = e.error_code
                 print(f"GPIB Communication Error [{error_code}]: {e.description}")

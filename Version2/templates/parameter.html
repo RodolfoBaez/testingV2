@@ -11,14 +11,16 @@
 </div>
 
 <!-- Parameter Settings Form -->
-<form action="/parameter" method="post" class="p-4 border rounded shadow-sm bg-white mb-5">
-    <!-- Measurement Type Selector -->
-    <div class="mb-3">
-        <label for="measurement_type" class="form-label">Measurement Type:</label>
-        <select class="form-select" id="measurement_type" name="measurement_type" required>
-            <option value="cv" selected>C-V Measurement</option>
-            <option value="ct">C-T Measurement</option>
-        </select>
+<form method="POST" action="{{ url_for('parameter') }}">
+    <label for="measurement_type">Select Measurement Type:</label>
+    <select name="measurement_type" id="measurement_type" {% if measurement_type %}disabled{% endif %}>
+        <option value="" disabled {% if not measurement_type %}selected{% endif %}>Select a type</option>
+        <option value="cv" {% if measurement_type = "cv" %}selected{% endif %}>C-V Measurement</option>
+        <option value="ct" {% if measurement_type = "ct" %}selected{% endif %}>C-T Measurement</option>
+    </select>
+    {% if measurement_type %}
+    <small class="form-text text-muted">This measurement type was set from the configuration page.</small>
+    {% endif %}
     </div>
 
     <!-- C-V Measurement Fields -->
@@ -140,7 +142,11 @@
 
     // Initialize the correct settings on page load
     document.addEventListener("DOMContentLoaded", function () {
-        if (measurementType.value === "ct") {
+        const measurementType = document.getElementById("measurement_type").value;
+        const cvSettings = document.getElementById("cv_settings");
+        const ctSettings = document.getElementById("ct_settings");
+
+        if (measurementType === "ct") {
             cvSettings.style.display = "none";
             ctSettings.style.display = "block";
         } else {
