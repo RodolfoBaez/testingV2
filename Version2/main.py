@@ -223,7 +223,7 @@ def parameter():
                 flash("Settings updated successfully!", "success")
             elif action == "start_pulse_sweep":
                 # Perform pulse sweep measurement
-                    csv_file_name = ctrl.pulse_sweep()
+                    csv_file_name = ctrl.pulsesweep()
                     if csv_file_name:
                         # Construct the full file path
                         csv_file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', csv_file_name)
@@ -247,7 +247,7 @@ def parameter():
                 # Perform measurement and save to CSV
                 if measurement_type == "cv":
                     print("Executing C-V measurement...")
-                    ctrl.single_config()  # Configure the device for C-V
+                    #ctrl.single_config()  # Configure the device for C-V
                     csv_file_name = ctrl.sweep_measure()  # Start the sweep measurement
                 elif measurement_type == "ct":
                     print("Executing C-T measurement...")
@@ -851,8 +851,8 @@ def serve_uploads(filename):
 # LAUNCHING THE APP #######################################################################################################################################
 if __name__ == '__main__':
     # Create a WebView window
-    #webview.create_window('HP 4280A Controller', app)  # Pass the Flask app to the WebView window
-    #webview.start()
+    webview.create_window('HP 4280A Controller', app)  # Pass the Flask app to the WebView window
+    webview.start()
 
     # Start the Flask app via web browser
-    app.run(debug=True, host="0.0.0.0", port=5001)
+    #app.run(debug=True, host="0.0.0.0", port=5001)

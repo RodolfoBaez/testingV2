@@ -438,44 +438,7 @@ class controller:
         else:
             print("No connection to instrument.")
             return None
-    
     """
-    def pulse_sweep(self, num, stopv):
-        if self.conn.inst is not None:
-            try:
-                temp1 = self.Stop_V
-                temp2 = self.Step_V
-                temp3 = self.Start_V
-                for i in range(num):  
-                    temp = self.Start_V
-                    self.set_StopV(stopv)
-                    self.set_StepV(temp)
-                    self.command("SW1")
-                    time.sleep(self.sweep_time_calc())
-                    self.command("SW0")
-                    self.command("BL1")
-                    self.command("BD")
-                    self.command("READ?")
-                    response = self.ReadBlockResponseAscii()
-                    if response is not None:
-                        print("Data Received: ", response)
-                        self.mkcsv(response)
-                    else:
-                        print("No data received")
-                    self.set_StartV(temp+temp2)
-                    if temp == temp1:
-                        self.command("SW0")   
-                        break
-                self.set_StopV(temp1)
-                self.set_Step(temp2)
-                self.set_StartV(temp3)                 
-            except pyvisa.errors.VisaIOError as e:
-                error_code = e.error_code
-                print(f"GPIB Communication Error [{error_code}]: {e.description}")
-        else:
-            print("No connection to instrument.")"
-        """
-    
     def pulse_sweep(self):
         if self.conn.inst is not None:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -486,7 +449,7 @@ class controller:
                 actual_end = self.Stop_V
                 while current_end < actual_end+self.Step_V:
                     self.set_StopV(current_end)
-                    self.set_StartV(current_end)
+                    self.set_StartV(0)
                     self.command("SW1")
                     self.conn.inst.timeout = 6000000
                     self.command("BL1")
@@ -510,7 +473,43 @@ class controller:
                 print(f"GPIB Communication Error [{error_code}]: {e.description}")
         else:
             print("No connection to instrument.")
-
+"""
+    def pulse_sweep(self):
+        if self.conn.inst is not None:
+            try:
+                temp1 = self.Stop_V
+                temp2 = self.Step_V
+                temp3 = self.Start_V
+                current_end = self.Step_V
+                actual_end = self.Stop_V
+                while current_end < actual_end+self.Step_V:  
+                    temp = self.Start_V
+                    self.set_StopV(self.Stop_V)
+                    self.set_StepV(temp)
+                    self.command("SW1")
+                    #time.sleep(self.sweep_time_calc())
+                    self.command("BL1")
+                    self.command("BD")
+                    self.command("READ?")
+                    response = self.ReadBlockResponseAscii()
+                    if response is not None:
+                        print("Data Received: ", response)
+                        self.mkcsv(response)
+                    else:
+                        print("No data received")
+                    self.set_StartV(temp+temp2)
+                    if temp == temp1:
+                        self.command("SW0")   
+                        break
+                    self.set_StopV(temp1)
+                    self.set_Step(temp2)
+                    self.set_StartV(temp3)        
+                current_end += self.Step_V         
+            except pyvisa.errors.VisaIOError as e:
+                error_code = e.error_code
+                print(f"GPIB Communication Error [{error_code}]: {e.description}")
+        else:
+            print("No connection to instrument.")
 
     #Function to calculate the number of steps taken in the sweep
     def step_calc(self):
