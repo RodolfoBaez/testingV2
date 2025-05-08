@@ -502,31 +502,6 @@ def wizardgraph():
     graph_settings = {'csv_file_path': csv_file_path}
     return render_template('wizardgraph.html', graph_settings=graph_settings)
 
-@app.route('/reset_connection', methods=["POST"])
-def reset_connection():
-    if 'email' not in session:
-        flash("Please log in to access this page.", "error")
-        return redirect(url_for("login"))
-
-    session_id = session['email']
-    try:
-        # Remove existing controller instance if it exists
-        if session_id in gpib_connections:
-            # Try to disconnect the current connection
-            old_ctrl = gpib_connections[session_id]
-            if hasattr(old_ctrl.conn, "disconnect"):
-                old_ctrl.conn.disconnect()
-            del gpib_connections[session_id]
-
-        # Reinitialize the controller with a fresh connection
-        ctrl = get_controller()
-
-        flash("Connection reset and re-established successfully!", "success")
-    except Exception as e:
-        flash(f"Error during reset: {str(e)}", "error")
-
-    return redirect(request.referrer or url_for("home"))
-
 @app.route('/history', methods=["GET"])
 def history():
     # Check if the user is logged in
@@ -850,13 +825,30 @@ def serve_uploads(filename):
     hp_data_folder = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData')
     return send_from_directory(hp_data_folder, filename)
 
-@app.route('/clear')
-def clear():
-    # Use the clear function from the controller
-    ctrl = get_controller()
-    ctrl.clear()
+@app.route('/reset_connection', methods=["POST"])
+def reset_connection():
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
 
-    return render_template("index.html", )
+    session_id = session['email']
+    try:
+        # Remove existing controller instance if it exists
+        if session_id in gpib_connections:
+            # Try to disconnect the current connection
+            old_ctrl = gpib_connections[session_id]
+            if hasattr(old_ctrl.conn, "disconnect"):
+                old_ctrl.conn.disconnect()
+            del gpib_connections[session_id]
+
+        # Reinitialize the controller with a fresh connection
+        ctrl = get_controller()
+        ctrl.clear()  # Clear the controller
+        flash("Connection reset and re-established successfully!", "success")
+    except Exception as e:
+        flash(f"Error during reset: {str(e)}", "error")
+
+    return redirect(request.referrer or url_for("home"))
 
 # LAUNCHING THE APP #######################################################################################################################################
 if __name__ == '__main__':

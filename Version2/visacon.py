@@ -3,7 +3,7 @@ import sys
 
 # VisaCon class to connect and disconnect from GPIB instruments
 class VisaCon:
-    def __init__(self, addr="GPIB0::17::INSTR", timeout=10000):
+    def __init__(self, addr="GPIB1::17::INSTR", timeout=10000):
         self.addr = addr
         self.timeout = timeout
         self.inst = None
