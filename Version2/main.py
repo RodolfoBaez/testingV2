@@ -852,9 +852,9 @@ def reset_connection():
 
 # LAUNCHING THE APP #######################################################################################################################################
 if __name__ == '__main__':
-    # Create a WebView window
-    #webview.create_window('HP 4280A Controller', app)  # Pass the Flask app to the WebView window
-    #webview.start()
+    # Create a WebView window. Use for production.
+    webview.create_window('HP 4280A Controller', app, width=1920, height=1080)  # Pass the Flask app to the WebView window
+    webview.start()
 
-    # Start the Flask app via web browser
-    app.run(debug=True, host="0.0.0.0", port=5001)
+    # Start the Flask app via web browser. Use for debugging and testing.
+    #app.run(debug=True, host="0.0.0.0", port=5001)
