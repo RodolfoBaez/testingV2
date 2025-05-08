@@ -2,7 +2,7 @@
 
 ## Creates the spec file
 ```
-pyinstaller --name EasyCV --onefile --add-data "templates;templates" --add-data "static;static" --add-data "database.db;." main.py
+pyinstaller --name EasyCV --onefile --add-data "templates;templates" --add-data "static;static" main.py
 ```
 
 ## Creates the executable

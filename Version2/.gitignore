@@ -1,7 +1,5 @@
 activate_venv.bat
 deactivate_venv.bat
-visacon.py
-testscript.py
 /uploads/
 /../myenv/
 /build/
@@ -9,4 +7,3 @@ testscript.py
 EasyCV.spec
 /venv/
 unmark
-database.db

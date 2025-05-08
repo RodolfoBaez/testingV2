@@ -99,15 +99,8 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/configuration">Measurements</a>
                     </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" aria-haspopup="true" aria-expanded="false">
-                          Graphing
-                        </a>
-                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                          <a class="dropdown-item" href="/graph">Manual Graph</a>
-                          <div class="dropdown-divider"></div>
-                          <a class="dropdown-item" href="/pulse_graph">Pulse Graph</a>
-                        </div>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/graph">Graph</a>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" aria-haspopup="true" aria-expanded="false">
@@ -141,7 +134,7 @@
 
                 <!-- Reset Button -->
                 <form action="{{ url_for('reset_connection') }}" method="POST" class="d-inline">
-                    <button type="submit" class="btn btn-warning btn-sm">Reset Connection</button>
+                    <button type="submit" class="btn btn-warning btn-sm" onclick="window.location.href='/clear'; return false;">Reset Connection</button>
                 </form>
 
                 <!-- Logout Button -->

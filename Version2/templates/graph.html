@@ -44,29 +44,29 @@
                         const capacitance = parseFloat(row[0].replace(/NCM\+/, ''));
                         const voltage = parseFloat(row[2].replace(/V+|"/g, ''));
 
-                        if (isNaN(capacitance) || isNaN(voltage)) return;
+                        // Skip rows where voltage is 0
+                        if (isNaN(capacitance) || isNaN(voltage) || capacitance === 0 || voltage === 0) return;
+
 
                         capacitances.push(capacitance);
                         xValues.push(voltage);
                     });
                 } else if (data[0][1] && data[0][1].toString().startsWith('T')) {
-                    console.log("Detected Time (T) data.");
-                    xLabel = 'Time (T)';
-                    data.forEach(row => {
-                        if (row.length < 2) return;
+                console.log("Detected Time (T) data.");
+                xLabel = 'Time (T)';
+                data.forEach(row => {
+                    if (row.length < 2) return;
 
-                        const capacitance = parseFloat(row[0].replace(/NCM\+/, ''));
-                        const time = parseFloat(row[1].replace(/T/, '').replace(/E\+0/, '').replace(/"/g, '').trim());
+                    const capacitance = parseFloat(row[0].replace(/NCM\+/, ''));
+                    const time = parseFloat(row[1].replace(/T/, '').replace(/E\+0/, '').replace(/"/g, '').trim());
 
-                        if (isNaN(capacitance) || isNaN(time)) return;
+                    // Skip if invalid or if capacitance is exactly 0
+                    if (isNaN(capacitance) || isNaN(time) || capacitance === 0) return;
 
-                        capacitances.push(capacitance);
-                        xValues.push(time);
-                    });
-                } else {
-                    alert("Unknown data format. Exiting...");
-                    return;
-                }
+                    capacitances.push(capacitance);
+                    xValues.push(time);
+                });
+            }
 
                 // Plot the graph
                 const trace = {

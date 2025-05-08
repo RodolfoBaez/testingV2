@@ -3,6 +3,8 @@ import csv
 import os
 from datetime import datetime
 import bcrypt
+import pytz
+from pytz import timezone
 
 # Define the path to the database file
 DB_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
@@ -48,14 +50,14 @@ def init_db():
             INSERT INTO users (first_name, last_name, email, password, is_admin)
             VALUES (?, ?, ?, ?, ?)
         ''', ("Admin", "User", "admin@hp4280a.com", hashed_password, 1))
-        print("Admin user created with email: admin@hp4280a.com and password: Welcome1")
+        #print("Admin user created with email: admin@hp4280a.com and password: Welcome1")
 
         # Add a demo user with simple credentials
         cursor.execute('''
             INSERT INTO users (first_name, last_name, email, password, is_admin)
             VALUES (?, ?, ?, ?, ?)
         ''', ("Demo", "User", "demo@hp4280a.com", "demo", 0))
-        print("Demo user created with email: demo@hp4280a.com and password: demo")
+        #print("Demo user created with email: demo@hp4280a.com and password: demo")
 
     conn.commit()
     conn.close()
@@ -120,15 +122,25 @@ def add_measurement(user_id, test_type, csv_file_path):
     """
     Add a new measurement to the database and return the measurement ID.
     """
-    conn = sqlite3.connect(DB_path)
-    cursor = conn.cursor()
+    conn = sqlite3.connect(DB_path)  # Create a database connection
+    cursor = conn.cursor()  # Create a cursor object
+
+    # Get the current time in UTC and convert it to EST
+    utc_now = datetime.now(timezone('UTC'))
+    est_now = utc_now.astimezone(timezone('US/Eastern'))
+
+    # Format the date and time for the database
+    date_recorded = est_now.strftime('%Y-%m-%d')
+    time_recorded = est_now.strftime('%H:%M:%S')
+
+    # Insert the measurement into the database
     cursor.execute('''
         INSERT INTO measurements (user_id, test_type, csv_file_path, date_recorded, time_recorded)
-        VALUES (?, ?, ?, DATE('now'), TIME('now'))
-    ''', (user_id, test_type, csv_file_path))
+        VALUES (?, ?, ?, ?, ?)
+    ''', (user_id, test_type, csv_file_path, date_recorded, time_recorded))
     conn.commit()
     measurement_id = cursor.lastrowid  # Get the ID of the newly inserted measurement
-    conn.close()
+    conn.close()  # Close the database connection
     return measurement_id
 
 

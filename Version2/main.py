@@ -4,12 +4,14 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from controller import controller
 from database import init_db, add_user, get_user_by_id, get_user_by_email, add_measurement, get_measurements
 from simulated_visacon import SimulatedVisaCon
+from datetime import datetime
+import pytz
+from pytz import timezone
 import sqlite3
 import csv
 import time
 import webview
 import bcrypt
-import datetime
 
 # Define the path to the database file
 DB_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
@@ -19,23 +21,32 @@ app.secret_key = "your_secret_key"  # Required for flashing messages and session
 
 @app.template_filter('datetimeformat')
 def datetimeformat(value, format='%Y-%m-%d'):
-    """Custom filter to format datetime values."""
+    """Custom filter to format datetime values, converting from UTC to Eastern Time."""
     try:
-        # Try parsing as a full datetime
-        value = datetime.datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+        # Define UTC timezone
+        utc = pytz.utc
+        # Try parsing as full datetime
+        dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+        # Assume the value is in UTC
+        dt = utc.localize(dt)
+        # Convert to Eastern Time
+        eastern = timezone('US/Eastern')
+        dt = dt.astimezone(eastern)
     except ValueError:
         try:
-            # Try parsing as a date only
-            value = datetime.datetime.strptime(value, '%Y-%m-%d')
+            # Try parsing as date only
+            dt = datetime.strptime(value, '%Y-%m-%d')
+            dt = pytz.utc.localize(dt)  # Handle as UTC
+            eastern = timezone('US/Eastern')
+            dt = dt.astimezone(eastern)
         except ValueError:
             try:
-                # Try parsing as a time only
-                value = datetime.datetime.strptime(value, '%H:%M:%S')
+                # Try parsing as time only
+                dt = datetime.strptime(value, '%H:%M:%S')
             except ValueError:
-                # If all parsing fails, return the original value
+                # If all parsing fails, return original value
                 return value
-    return value.strftime(format)
-
+    return dt.strftime(format)
 # Initialize the database
 init_db()
 
@@ -116,7 +127,12 @@ def get_controller():
             Stop_V=5.0,
             Step_V=0.5,
             Hold_T=0.05,
-            Step_T=0.05
+            Step_T=0.05,
+            Pulse=0.0,
+            Meas=0.0,
+            Nofread=10.0,
+            Pulse_Width=1.0,
+            Meas_Interval=0.15
         )
 
     return gpib_connections[session_id]
@@ -130,7 +146,12 @@ def initialize_settings():
             "Stop_V": 5.0,
             "Step_V": 0.5,
             "Hold_T": 0.05,
-            "Step_T": 0.05
+            "Step_T": 0.05,
+            "Pulse": 0.0,
+            "Meas": 0.0,
+            "Nofread": 10.0,
+            "Pulse_Width": 1.0,
+            "Meas_Interval": 0.15
         }
 
 def check_connection_status():
@@ -174,122 +195,6 @@ def contributions():
     return render_template("contributions.html")
 
 # MEASUREMENT PAGES #######################################################################################################################################
-
-@app.route('/parameter', methods=["GET", "POST"])
-def parameter():
-    # Check if the user is logged in
-    if 'email' not in session:
-        flash("Please log in to access this page.", "error")
-        return redirect(url_for("login"))
-
-    # Initialize settings if not already set
-    initialize_settings()
-
-    try:
-        # Get the controller instance
-        ctrl = get_controller()
-
-        if request.method == "POST":
-            action = request.form.get("action")
-            if action == "update_settings":
-                # Update general settings
-                session["settings"].update({
-                    "DC_V": float(request.form['DC_V']),
-                    "Start_V": float(request.form['Start_V']),
-                    "Stop_V": float(request.form['Stop_V']),
-                    "Step_V": float(request.form['Step_V']),
-                    "Hold_T": float(request.form['Hold_T']),
-                    "Step_T": float(request.form['Step_T']),
-
-                    "Pulse": float(request.form['Pulse']),
-                    "Meas": float(request.form['Meas']),
-                    "Nofread": float(request.form['Nofread']),
-                    "Pulse_Width": float(request.form['Pulse_Width']),
-                    "Meas_Interval": float(request.form['Meas_Interval'])
-                })
-                # Update controller settings
-                ctrl.set_DCV(session["settings"]["DC_V"])
-                ctrl.set_StartV(session["settings"]["Start_V"])
-                ctrl.set_StopV(session["settings"]["Stop_V"])
-                ctrl.set_StepV(session["settings"]["Step_V"])
-                ctrl.set_Hold_Time(session["settings"]["Hold_T"])
-                ctrl.set_StepT(session["settings"]["Step_T"])
-                # CT Settings
-                ctrl.set_Pulse(session["settings"]["Pulse"]) #voltage value
-                ctrl.set_Measure_pulse(session["settings"]["Meas"]) #voltage value
-                ctrl.set_NOFREAD(session["settings"]["Nofread"]) #whole number
-                ctrl.set_th(session["settings"]["Pulse_Width"]) #hold time (CANNOT BE DECIMAL LESS THAN 1)
-                ctrl.set_td(session["settings"]["Meas_Interval"]) #delay time (CANNOT BE DECIMAL LESS THAN 1)
-                flash("Settings updated successfully!", "success")
-            elif action == "start_pulse_sweep":
-                # Perform pulse sweep measurement
-                    csv_file_name = ctrl.pulsesweep()
-                    if csv_file_name:
-                        # Construct the full file path
-                        csv_file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', csv_file_name)
-                        
-                        # Add the measurement to the database
-                        user = get_user_by_email(session['email'])
-                        add_measurement(
-                            user_id=user[0],  # Assuming user[0] is the user ID
-                            test_type="Pulse Measurement",
-                            csv_file_path=csv_file_path
-                        )
-                        flash("Pulse Sweep Measurement completed! Data saved to CSV and database.", "success")
-                    else:
-                        flash("Pulse Sweep Measurement failed. No data received.", "error")
-
-            elif action == "start_measurement":
-                # Get the measurement type
-                measurement_type = request.form.get("measurement_type")
-                print(f"Measurement type selected: {measurement_type}")  # Debugging log
-
-                # Perform measurement and save to CSV
-                if measurement_type == "cv":
-                    print("Executing C-V measurement...")
-                    #ctrl.single_config()  # Configure the device for C-V
-                    csv_file_name = ctrl.sweep_measure()  # Start the sweep measurement
-                elif measurement_type == "ct":
-                    print("Executing C-T measurement...")
-                    # ctrl.set_ctfunc()  # Configure the device for C-T
-                    #ctrl.default_CT()  # Set default C-T settings
-                    csv_file_name = ctrl.sweep_measure()  # Start the sweep measurement
-                
-                # Add the measurement to the database if the CSV file was saved
-                if csv_file_name:
-                    csv_file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', csv_file_name)
-                    user = get_user_by_email(session['email'])
-                    add_measurement(
-                        user_id=user[0],  # Assuming user[0] is the user ID
-                        test_type=measurement_type.upper() + " Measurement",
-                        csv_file_path=csv_file_path
-                    )
-                    flash("Measurement completed successfully! Data saved to CSV and database.", "success")
-                else:
-                    flash("Measurement failed. No data received.", "error")
-                    
-        connection_status, terminal_output = check_connection_status()
-        return render_template("parameter.html", connection_status=connection_status, terminal_output=terminal_output, settings=session["settings"])
-
-    except Exception as e:
-        flash(f"Error: {str(e)}", "error")
-        return redirect(url_for("home"))
-
-@app.route('/graph', methods=["GET", "POST"])
-def graph():
-    # Check if the user is logged in
-    if 'email' not in session:
-        flash("Please log in to access this page.", "error")
-        return redirect(url_for("login"))
-
-    # Provide default graph_settings if accessed directly
-    graph_settings = {
-        "csv_file_name": "example.csv",  # Replace with a default or example file name
-        "csv_file_path": "",  # No file path available when accessed directly
-        "measurement": None  # No measurement data available
-    }
-
-    return render_template("graph.html", graph_settings=graph_settings)
 
 @app.route('/configuration', methods=["GET", "POST"])
 def configuration():
@@ -450,14 +355,122 @@ def configuration():
                             flash("Invalid signal level selected.", "error")
                 case _:
                     flash("Invalid action selected.", "error")
+        
+        # Default to cgt mode if no mode is set
+        if "mode" not in session:
+            session["mode"] = "cgt"
 
         return render_template("configuration.html", connection_type="Real Connection", settings=session["settings"])
     except Exception as e:
         flash(f"Error: {str(e)}", "error")
         return redirect(url_for("home"))
+    
+@app.route('/parameter', methods=["GET", "POST"])
+def parameter():
+    # Check if the user is logged in
+    if 'email' not in session:
+        flash("Please log in to access this page.", "error")
+        return redirect(url_for("login"))
 
-@app.route('/pulse_graph', methods=["GET", "POST"])
-def pulsegraph():
+    # Initialize settings if not already set
+    initialize_settings()
+
+    try:
+        # Get the controller instance
+        ctrl = get_controller()
+
+        if request.method == "POST":
+            action = request.form.get("action")
+            match action:
+                case "update_settings":
+                    sweep_type = request.form.get("sweep_type", "")
+                    if sweep_type == "voltage":
+                        session["settings"].update({
+                            "DC_V": float(request.form['DC_V']),
+                            "Start_V": float(request.form['Start_V']),
+                            "Stop_V": float(request.form['Stop_V']),
+                            "Step_V": float(request.form['Step_V']),
+                            "Hold_T": float(request.form['Hold_T']),
+                            "Step_T": float(request.form['Step_T']),
+                        })
+                        ctrl.set_DCV(session["settings"]["DC_V"])
+                        ctrl.set_StartV(session["settings"]["Start_V"])
+                        ctrl.set_StopV(session["settings"]["Stop_V"])
+                        ctrl.set_StepV(session["settings"]["Step_V"])
+                        ctrl.set_Hold_Time(session["settings"]["Hold_T"])
+                        ctrl.set_StepT(session["settings"]["Step_T"])
+                        flash("Voltage settings updated successfully!", "success")
+
+                    elif sweep_type == "time":
+                        session["settings"].update({
+                            "Pulse": float(request.form['Pulse']),
+                            "Meas": float(request.form['Meas']),
+                            "Nofread": float(request.form['Nofread']),
+                            "Pulse_Width": float(request.form['Pulse_Width']),
+                            "Meas_Interval": float(request.form['Meas_Interval']),
+                        })
+                        ctrl.set_Pulse(session["settings"]["Pulse"])
+                        ctrl.set_Measure_pulse(session["settings"]["Meas"])
+                        ctrl.set_NOFREAD(session["settings"]["Nofread"])
+                        ctrl.set_th(session["settings"]["Pulse_Width"])
+                        ctrl.set_td(session["settings"]["Meas_Interval"])
+                        flash("Time settings updated successfully!", "success")
+
+                    else:
+                        flash("Invalid sweep type provided for settings update.", "danger")
+
+                case "start_pulse_sweep":
+                    csv_file_name = ctrl.pulse_sweep()
+                    if csv_file_name:
+                        csv_file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', csv_file_name)
+                        user = get_user_by_email(session['email'])
+                        add_measurement(
+                            user_id=user[0],
+                            test_type="Pulse Measurement",
+                            csv_file_path=csv_file_path
+                        )
+                        flash("Pulse Sweep Measurement completed! Data saved to CSV and database.", "success")
+                    else:
+                        flash("Pulse Sweep Measurement failed. No data received.", "error")
+
+                case "start_measurement":
+                    measurement_type = request.form.get("sweep_type") or "voltage"
+                    print(f"Measurement type selected: {measurement_type}")
+
+                    csv_file_name = None
+                    if measurement_type == "voltage":
+                        print(f"Executing C-V measurement...")
+                        csv_file_name = ctrl.sweep_measure()  # Assuming this is for C-V
+                    elif measurement_type == "time":
+                        print(f"Executing C-T measurement...")
+                        csv_file_name = ctrl.sweep_measure()  # Assuming this is for C-T
+
+
+                    if csv_file_name:
+                        csv_file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', csv_file_name)
+                        user = get_user_by_email(session['email'])
+                        add_measurement(
+                            user_id=user[0],
+                            test_type=measurement_type.upper() + " Measurement",
+                            csv_file_path=csv_file_path
+                        )
+                        flash("Measurement completed successfully! Data saved to CSV and database.", "success")
+                    else:
+                        flash("Measurement failed. No data received.", "error")
+
+                case _:
+                    flash("Unknown action.", "error")
+
+                    
+        connection_status, terminal_output = check_connection_status()
+        return render_template("parameter.html", connection_status=connection_status, terminal_output=terminal_output, settings=session["settings"])
+
+    except Exception as e:
+        flash(f"Error: {str(e)}", "error")
+        return redirect(url_for("home"))
+
+@app.route('/graph', methods=["GET", "POST"])
+def graph():
     # Check if the user is logged in
     if 'email' not in session:
         flash("Please log in to access this page.", "error")
@@ -470,7 +483,7 @@ def pulsegraph():
         "measurement": None  # No measurement data available
     }
 
-    return render_template("pulsegraph.html", graph_settings=graph_settings)
+    return render_template("graph.html", graph_settings=graph_settings)
 
 @app.route('/wizardgraph')
 def wizardgraph():
@@ -566,26 +579,15 @@ def view_measurement(measurement_id):
     # Extract only the file name to pass to the template
     csv_file_name = os.path.basename(csv_file_path)
 
-    # Determine the type of measurement and render the appropriate template
-    if measurement[4] == "Pulse Measurement":  # Check if the test_type is "Pulse Measurement"
-        return render_template(
-            "pulsegraph.html",
-            graph_settings={
-                "csv_file_name": csv_file_name,  # Pass only the file name
-                "csv_file_path": csv_file_path,  # Pass the full file path for download
-                "measurement": measurement
-            }
-        )
-    else:
-        # For other measurement types, render the graph.html template
-        return render_template(
-            "graph.html",
-            graph_settings={
-                "csv_file_name": csv_file_name,  # Pass only the file name
-                "csv_file_path": csv_file_path,  # Pass the full file path for download
-                "measurement": measurement
-            }
-        )
+     # For other measurement types, render the graph.html template
+    return render_template(
+        "graph.html",
+        graph_settings={
+            "csv_file_name": csv_file_name,  # Pass only the file name
+            "csv_file_path": csv_file_path,  # Pass the full file path for download
+            "measurement": measurement
+        }
+    )
 
 @app.route('/delete_measurement/<int:measurement_id>', methods=["POST"])
 def delete_measurement(measurement_id):
@@ -848,11 +850,19 @@ def serve_uploads(filename):
     hp_data_folder = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData')
     return send_from_directory(hp_data_folder, filename)
 
+@app.route('/clear')
+def clear():
+    # Use the clear function from the controller
+    ctrl = get_controller()
+    ctrl.clear()
+
+    return render_template("index.html", )
+
 # LAUNCHING THE APP #######################################################################################################################################
 if __name__ == '__main__':
     # Create a WebView window
-    webview.create_window('HP 4280A Controller', app)  # Pass the Flask app to the WebView window
-    webview.start()
+    #webview.create_window('HP 4280A Controller', app)  # Pass the Flask app to the WebView window
+    #webview.start()
 
     # Start the Flask app via web browser
-    #app.run(debug=True, host="0.0.0.0", port=5001)
+    app.run(debug=True, host="0.0.0.0", port=5001)

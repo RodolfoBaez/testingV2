@@ -12,23 +12,26 @@ class controller:
     Step_V = 0.0
     Hold_T = 0.0
     Step_T = 0.0
+    Pulse=0.0
+    Meas=0.0
+    Nofread=10.0
+    Pulse_Width=1.0
+    Meas_Interval=1.0
 
-    def __init__(self, conn, DC_V, Start_V, Stop_V, Step_V, Hold_T, Step_T):
+    def __init__(self, conn, DC_V, Start_V, Stop_V, Step_V, Hold_T, Step_T, Pulse, Meas, Nofread, Pulse_Width, Meas_Interval):
         self.DC_V = DC_V
         self.Start_V = Start_V
         self.Stop_V = Stop_V
         self.Step_V = Step_V
         self.Hold_T = Hold_T
         self.Step_T = Step_T
+        self.Pulse = Pulse
+        self.Meas = Meas
+        self.Nofread = Nofread
+        self.Pulse_Width = Pulse_Width
+        self.Meas_Interval = Meas_Interval
         
         self.conn = conn
-
-    # Ensure the connection object has an 'inst' attribute
-        if hasattr(self.conn, 'inst'):
-            self.inst = self.conn.inst
-        else:
-            raise AttributeError("The connection object does not have an 'inst' attribute.")
-        
     # initialize the instrument measurement
 
     def measure_start(self):
@@ -223,7 +226,7 @@ class controller:
     None Numerical Settings
     Mode configurations:
     Floating mode: FL
-    Ground mode: GN
+    Ground mode: GR
 
     Measurement speed:
     Slow: MS3
@@ -253,7 +256,7 @@ class controller:
     
     def set_ground(self):
         if self.conn.inst is not None:
-            self.command("GN")
+            self.command("GR")
         else:
             print("No connection to instrument.")
 
@@ -395,6 +398,7 @@ class controller:
 
 ###################################################################################################################
 
+
     #Functions to begin data collection
     ###Commands sent to the HP4280A to start and stop sweeps
     def init_sweep(self):
@@ -420,38 +424,74 @@ class controller:
             self.command("SW1")
             self.command("BL1")
             self.command("BD")
+            print("Running Sweep. Please stand by...")
             self.command("READ?")
             response = self.ReadBlockResponseAscii()
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             filename = f"data_{timestamp}.csv"
-            file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', filename)  # Include the file name
             if response is not None:
                 print("Data Received: ", response)
                 self.mkcsv(response, filename)
                 self.command("SW0")
                 self.conn.inst.timeout = 10000
                 print("Sweep Stopped")
-                return file_path  # Return the full file path
+                return filename
             else:
                 print("No data received")
-                return None
         else:
             print("No connection to instrument.")
-            return None
+    ###
+    
     """
-    def pulse_sweep(self):
+    def pulse_sweep(self, num, stopv):
+        if self.conn.inst is not None:
+            try:
+                temp1 = self.Stop_V
+                temp2 = self.Step_V
+                temp3 = self.Start_V
+                for i in range(num):  
+                    temp = self.Start_V
+                    self.set_StopV(stopv)
+                    self.set_StepV(temp)
+                    self.command("SW1")
+                    time.sleep(self.sweep_time_calc())
+                    self.command("SW0")
+                    self.command("BL1")
+                    self.command("BD")
+                    self.command("READ?")
+                    response = self.ReadBlockResponseAscii()
+                    if response is not None:
+                        print("Data Received: ", response)
+                        self.mkcsv(response)
+                    else:
+                        print("No data received")
+                    self.set_StartV(temp+temp2)
+                    if temp == temp1:
+                        self.command("SW0")   
+                        break
+                self.set_StopV(temp1)
+                self.set_Step(temp2)
+                self.set_StartV(temp3)                 
+            except pyvisa.errors.VisaIOError as e:
+                error_code = e.error_code
+                print(f"GPIB Communication Error [{error_code}]: {e.description}")
+        else:
+            print("No connection to instrument.")"
+        """
+    
+    """def pulse_sweep(self):
         if self.conn.inst is not None:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            filename = f"pulse_data_{timestamp}.csv"
-            file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', filename)
+            filename = f"data_{timestamp}.csv"
             try:
+                self.set_double()
                 current_end = self.Step_V
                 actual_end = self.Stop_V
                 while current_end < actual_end+self.Step_V:
                     self.set_StopV(current_end)
-                    self.set_StartV(0)
+                    self.set_StartV(current_end)
                     self.command("SW1")
-                    self.conn.inst.timeout = 6000000
+                    self.conn.inst.timeout = 1000000
                     self.command("BL1")
                     self.command("BD")
                     self.command("READ?")                        
@@ -466,91 +506,52 @@ class controller:
                     self.conn.inst.timeout = 10000
                     print("Pulse complete\n")
                     current_end += self.Step_V
-                return filename
 
             except pyvisa.errors.VisaIOError as e:
                 error_code = e.error_code
                 print(f"GPIB Communication Error [{error_code}]: {e.description}")
         else:
-            print("No connection to instrument.")
-"""
+            print("No connection to instrument.")"""
+    
     def pulse_sweep(self):
         if self.conn.inst is not None:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             filename = f"pulse_data_{timestamp}.csv"
-            file_path = os.path.join(os.environ['USERPROFILE'], 'Documents', 'HPData', filename)
-
-            # Ensure Step_V is not zero
-            if self.Step_V == 0:
-                print("Step_V cannot be 0. Exiting pulse_sweep.")
-                return
-
             try:
-                current_voltage = 0  # Start at 0 volts
+                #self.set_double()
+                current_end = self.Step_V
                 actual_end = self.Stop_V
-                seen_voltages = set()  # Track seen voltages to avoid duplicates
-
-                while current_voltage <= actual_end:
-                    # Step 1: Set voltage to 0
+                init_step = self.Step_V
+                pulse_step = self.Step_V
+                while current_end <= actual_end:#+self.Step_V:
                     self.set_StartV(0)
-                    self.set_StopV(0)
-                    self.command("SW1")
+                    self.set_StopV(current_end)
+                    self.set_StepV(pulse_step)
                     self.conn.inst.timeout = 1000000
-                    self.command("BL1")
-                    self.command("BD")
-                    self.command("READ?")
-                    response = self.ReadBlockResponseAscii()
-                    if response is not None:
-                        print("Data Received at 0V: ", response)
-                        if 0 not in seen_voltages:
-                            self.mkcsv(response, filename)
-                            seen_voltages.add(0)
-                    else:
-                        print("No data received at 0V")
-
-                    # Step 2: Increment to the next voltage step
-                    self.set_StartV(0)
-                    self.set_StopV(current_voltage)
                     self.command("SW1")
                     self.command("BL1")
                     self.command("BD")
-                    self.command("READ?")
+                    self.command("READ?")                        
                     response = self.ReadBlockResponseAscii()
                     if response is not None:
-                        print(f"Data Received at {current_voltage}V: ", response)
-                        if current_voltage not in seen_voltages:
-                            self.mkcsv(response, filename)
-                            seen_voltages.add(current_voltage)
+                        print("Pulse Complete")
+                        print("Data Received: ", response)
+                        self.mkcsv(response, filename)
                     else:
-                        print(f"No data received at {current_voltage}V")
-
-                    # Step 3: Return to 0 volts
-                    self.set_StartV(0)
-                    self.set_StopV(0)
-                    self.command("SW1")
-                    self.command("BL1")
-                    self.command("BD")
-                    self.command("READ?")
-                    response = self.ReadBlockResponseAscii()
-                    if response is not None:
-                        print("Data Received at 0V (return): ", response)
-                        if 0 not in seen_voltages:
-                            self.mkcsv(response, filename)
-                            seen_voltages.add(0)
-                    else:
-                        print("No data received at 0V (return)")
-
-                    # Step 4: Increment to the next step
-                    current_voltage += self.Step_V
-
-                print("Pulse sweep complete.")
-                return filename
-
+                        print("No data received")
+                    self.command("SW0")
+                    self.conn.inst.timeout = 10000
+                    print("Pulse complete\n")
+                    current_end += init_step
+                    pulse_step = current_end
+            
+            
             except pyvisa.errors.VisaIOError as e:
                 error_code = e.error_code
                 print(f"GPIB Communication Error [{error_code}]: {e.description}")
         else:
             print("No connection to instrument.")
+        return filename
 
     #Function to calculate the number of steps taken in the sweep
     def step_calc(self):
@@ -663,8 +664,7 @@ class controller:
         else:
             print("No connection to instrument.")
     
-    ###Deprecated function (query exists...lol)
-    """def read_data(self):
+    def read_data(self):
         if self.conn.inst is not None:
             try:
                 self.command("AS")
@@ -676,7 +676,7 @@ class controller:
                 print(f"GPIB Communication Error [{error_code}]: {e.description}")
             return None
         else:
-            print("No connection to instrument.")"""
+            print("No connection to instrument.")
 
     def mkcsv(self, data, filename='data.csv', file_path=None):
         if file_path is None:
@@ -693,3 +693,5 @@ class controller:
             writer = csv.writer(file)
             writer.writerows(formatted_data)  # Write properly formatted rows
         print("Data saved to CSV")
+        
+

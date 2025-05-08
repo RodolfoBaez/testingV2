@@ -14,79 +14,81 @@
 <form method="POST" action="{{ url_for('parameter') }}">
     <label for="measurement_type">Select Measurement Type:</label>
     <select name="measurement_type" id="measurement_type" {% if measurement_type %}disabled{% endif %}>
-        <option value="" disabled {% if not measurement_type %}selected{% endif %}>Select a type</option>
-        <option value="cv" {% if measurement_type = "cv" %}selected{% endif %}>C-V Measurement</option>
-        <option value="ct" {% if measurement_type = "ct" %}selected{% endif %}>C-T Measurement</option>
+        <option value="cv" {% if measurement_type == "cv" %}selected{% endif %}>C-V Measurement</option>
+        <option value="ct" {% if measurement_type == "ct" %}selected{% endif %}>C-T Measurement</option>
     </select>
     {% if measurement_type %}
     <small class="form-text text-muted">This measurement type was set from the configuration page.</small>
     {% endif %}
-    </div>
 
     <!-- C-V Measurement Fields -->
     <div id="cv_settings">
         <div class="mb-3">
-            <label for="DC_V" class="form-label">DC Voltage (DC_V):</label>
+            <label for="DC_V" class="form-label">DC Voltage (v):</label>
             <input type="number" step="0.01" class="form-control" id="DC_V" name="DC_V" value="{{ settings.DC_V }}" required>
         </div>
         <div class="mb-3">
-            <label for="Start_V" class="form-label">Start Voltage (Start_V):</label>
+            <label for="Start_V" class="form-label">Start Voltage (v):</label>
             <input type="number" step="0.01" class="form-control" id="Start_V" name="Start_V" value="{{ settings.Start_V }}" required>
         </div>
         <div class="mb-3">
-            <label for="Stop_V" class="form-label">Stop Voltage (Stop_V):</label>
+            <label for="Stop_V" class="form-label">Stop Voltage (v):</label>
             <input type="number" step="0.01" class="form-control" id="Stop_V" name="Stop_V" value="{{ settings.Stop_V }}" required>
         </div>
         <div class="mb-3">
-            <label for="Step_V" class="form-label">Step Voltage (Step_V):</label>
+            <label for="Step_V" class="form-label">Step Voltage (v):</label>
             <input type="number" step="0.01" class="form-control" id="Step_V" name="Step_V" value="{{ settings.Step_V }}" required>
         </div>
         <div class="mb-3">
-            <label for="Hold_T" class="form-label">Hold Time (Hold_T):</label>
+            <label for="Hold_T" class="form-label">Hold Time (sec):</label>
             <input type="number" step="0.01" class="form-control" id="Hold_T" name="Hold_T" value="{{ settings.Hold_T }}" required>
         </div>
         <div class="mb-3">
-            <label for="Step_T" class="form-label">Step Time (Step_T):</label>
+            <label for="Step_T" class="form-label">Step Time (sec):</label>
             <input type="number" step="0.01" class="form-control" id="Step_T" name="Step_T" value="{{ settings.Step_T }}" required>
-        </div>
-        <div class="mb-3 text-center">
-            <button type="submit" name="action" value="start_pulse_sweep" class="btn btn-outline-warning" id="pulse_sweep_button">Start Pulse Sweep</button>
         </div>
     </div>
 
     <!-- C-T Measurement Fields -->
     <div id="ct_settings" style="display: none;">
         <div class="mb-3">
-            <label for="Pulse" class="form-label">Pulse (V):</label>
-            <input type="number" step="0.01" class="form-control" id="Pulse" name="Pulse" value="0">
+            <label for="Pulse" class="form-label">Pulse (v):</label>
+            <input type="number" step="0.01" class="form-control" id="Pulse" name="Pulse" value="{{ settings.Pulse }}" required>
         </div>
         <div class="mb-3">
-            <label for="Meas" class="form-label">MEAS:</label>
-            <input type="number" step="0.01" class="form-control" id="Meas" name="Meas" value="0">
+            <label for="Meas" class="form-label">Measurement Volt (MEAS v):</label>
+            <input type="number" step="0.01" class="form-control" id="Meas" name="Meas" value="{{ settings.Meas }}" required>
         </div>
         <div class="mb-3">
             <label for="Nofread" class="form-label"># OF READING:</label>
-            <input type="number" step="1" class="form-control" id="Nofread" name="Nofread" value="10">
+            <input type="number" step="1" class="form-control" id="Nofread" name="Nofread" value="{{ settings.Nofread }}" required>
         </div>
         <div class="mb-3">
-            <label for="Pulse_Width" class="form-label">Pulse Width (s):</label>
-            <input type="number" step="0.01" class="form-control" id="Pulse_Width" name="Pulse_Width" value="1">
+            <label for="Pulse_Width" class="form-label">Pulse Width/Set Hold Time (sec):</label>
+            <input type="number" step="0.01" class="form-control" id="Pulse_Width" name="Pulse_Width" value="{{ settings.Pulse_Width }}" required>
         </div>
         <div class="mb-3">
-            <label for="Meas_Interval" class="form-label">MEAS Interval (s):</label>
-            <input type="number" step="0.01" class="form-control" id="Meas_Interval" name="Meas_Interval" value="0.1">
+            <label for="Meas_Interval" class="form-label">MEAS Interval/Set Delay Time (sec):</label>
+            <input type="number" class="form-control" id="Meas_Interval" name="Meas_Interval" value="{{ settings.Meas_Interval }}" required>
         </div>
     </div>
 
-    <!-- Action Buttons -->
-    <div class="d-flex justify-content-between">
-        <button type="submit" name="action" value="update_settings" class="btn btn-outline-primary">Update Settings</button>
-        <button type="submit" name="action" value="start_measurement" class="btn btn-outline-success">Start Measurement</button>
-    </div>
+    <form method="post">
+        <!-- Hidden input to indicate settings type -->
+        <input type="hidden" name="sweep_type" id="sweep_type_input" value="voltage"> <!-- or "time" -->
+    
+        <!-- Action Buttons -->
+        <div class="d-grid gap-2">
+            <button type="submit" name="action" value="start_pulse_sweep" class="btn btn-outline-warning" id="pulse_sweep_button">Start Pulse Sweep</button>
+            <button type="submit" name="action" value="start_measurement" class="btn btn-outline-success">Start Measurement</button>
+            <button type="submit" name="action" value="update_settings" class="btn btn-outline-primary">Update Settings</button>
+            <a href="/configuration" class="btn btn-outline-secondary">Back to Configuration</a>
+        </div>
+    </form>
 </form>
 
 <div class="mt-4 text-center">
-    <a href="/configuration" class="btn btn-outline-secondary">Back to Configuration</a>
+    
 </div>
 
 <script>
@@ -94,65 +96,92 @@
     document.addEventListener('DOMContentLoaded', function() {
         restrictMeasurementType();
     });
-    
+
     // Show/Hide Settings Based on Measurement Type
     const measurementType = document.getElementById("measurement_type");
     const cvSettings = document.getElementById("cv_settings");
     const ctSettings = document.getElementById("ct_settings");
+    const pulseSweepButton = document.getElementById("pulse_sweep_button");
+
+    const sweepTypeInput = document.getElementById('sweep_type_input');
+
+    // Function to toggle required attributes based on visibility
+    function toggleRequiredAttributes() {
+        const ctFields = document.querySelectorAll('#ct_settings input');
+        const cvFields = document.querySelectorAll('#cv_settings input');
+
+        if (measurementType.value === "ct") {
+            ctFields.forEach(field => field.required = true);
+            cvFields.forEach(field => field.required = false);
+        } else {
+            ctFields.forEach(field => field.required = false);
+            cvFields.forEach(field => field.required = true);
+        }
+    }
 
     measurementType.addEventListener("change", function () {
         if (this.value === "ct") {
             cvSettings.style.display = "none";
             ctSettings.style.display = "block";
+            pulseSweepButton.style.display = "none";
+            sweepTypeInput.value = "time";  // Update sweep_type
         } else {
             cvSettings.style.display = "block";
             ctSettings.style.display = "none";
+            pulseSweepButton.style.display = "block";
+            sweepTypeInput.value = "voltage";  // Update sweep_type
         }
+        toggleRequiredAttributes(); // Update required attributes
     });
 
     // Function to restrict measurement type based on configuration selection
     function restrictMeasurementType() {
-    const measurementTypeSelect = document.getElementById('measurement_type');
-    const savedType = localStorage.getItem('measurement_type');
-    
-    // If there's a saved type from the config page
-    if (savedType) {
-        // Set the value
-        measurementTypeSelect.value = savedType;
-        
-        // Disable changing the selection
-        measurementTypeSelect.disabled = true;
-        
-        // Add a note that this was set from configuration
-        const noteElement = document.createElement('small');
-        noteElement.className = 'form-text text-muted';
-        noteElement.textContent = 'This measurement type was set from the configuration page.';
-        measurementTypeSelect.parentNode.appendChild(noteElement);
-        
-        // Also trigger the display logic immediately
-        if (savedType === 'ct') {
-            document.getElementById('cv_settings').style.display = 'none';
-            document.getElementById('ct_settings').style.display = 'block';
-        } else {
-            document.getElementById('cv_settings').style.display = 'block';
-            document.getElementById('ct_settings').style.display = 'none';
+        const measurementTypeSelect = document.getElementById('measurement_type');
+        const savedType = localStorage.getItem('measurement_type');
+
+        // If there's a saved type from the config page
+        if (savedType) {
+            // Set the value
+            measurementTypeSelect.value = savedType;
+
+            // Disable changing the selection
+            measurementTypeSelect.disabled = true;
+
+            // Add a note that this was set from configuration
+            const noteElement = document.createElement('small');
+            noteElement.className = 'form-text text-muted';
+            noteElement.textContent = 'This measurement type was set from the configuration page.';
+            measurementTypeSelect.parentNode.appendChild(noteElement);
+
+            // Also trigger the display logic immediately
+            if (savedType === 'ct') {
+                document.getElementById('cv_settings').style.display = 'none';
+                document.getElementById('ct_settings').style.display = 'block';
+                pulseSweepButton.style.display = "none"; // Hide the Start Pulse Sweep button
+            } else {
+                document.getElementById('cv_settings').style.display = 'block';
+                document.getElementById('ct_settings').style.display = 'none';
+                pulseSweepButton.style.display = "block"; // Show the Start Pulse Sweep button
+            }
         }
+        toggleRequiredAttributes(); // Update required attributes on page load
     }
-}
 
     // Initialize the correct settings on page load
     document.addEventListener("DOMContentLoaded", function () {
-        const measurementType = document.getElementById("measurement_type").value;
-        const cvSettings = document.getElementById("cv_settings");
-        const ctSettings = document.getElementById("ct_settings");
-
-        if (measurementType === "ct") {
+        const measurementTypeValue = measurementType.value;
+        if (measurementTypeValue === "ct") {
             cvSettings.style.display = "none";
             ctSettings.style.display = "block";
+            pulseSweepButton.style.display = "none";
+            sweepTypeInput.value = "time";
         } else {
             cvSettings.style.display = "block";
             ctSettings.style.display = "none";
+            pulseSweepButton.style.display = "block";
+            sweepTypeInput.value = "voltage";
         }
+        toggleRequiredAttributes(); // Update required attributes on page load
     });
 </script>
 {% endblock %}
